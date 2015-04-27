@@ -92,7 +92,7 @@ namespace PuppetMaster
                           * WAIT <SECS> 
                           */
 
-                        if (split.Length == 6)
+                        if (split.Length == 2)
                         {
 
                             int secs = Int32.Parse(split[1]);
@@ -123,19 +123,20 @@ namespace PuppetMaster
                           * SLOWW <ID> <delay-in-seconds>
                           */
 
-                        if (split.Length == 6)
+                        if (split.Length == 3)
                         {
 
                             string id = split[1];
-                            
+                            int delayInSeconds = Int32.Parse(split[2]);
+
+                            puppetMaster.SlowW(id, delayInSeconds);
 
                         }
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: WAIT <SECS>");
+                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
                         }
-
 
                         break;
                 
