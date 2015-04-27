@@ -41,20 +41,40 @@ namespace PuppetMaster
         {
 
             // If the PuppetMaster is my own
-            if (puppetMasterUrl.Equals(url)) {
+            if (puppetMasterUrl.Equals(url))
+            {
                 // Start the worker process
-                Process.Start("Worker/bin/Worker.exe", id);
+                Process.Start("Worker/bin/Worker.exe", id + " " + puppetMasterUrl + " " + serviceUrl);
+
+                // Console message
+                Console.WriteLine("Created worker " + id + " at " + serviceUrl + ".");
+
+                return true;
+
+            } else {
 
             }
 
-
-            return true;
+            return false;
 
         }
 
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl)
         {
-            return true;
+            // If the PuppetMaster is my own
+            if (puppetMasterUrl.Equals(url))
+            {
+                // Start the worker process
+                Process.Start("Worker/bin/Worker.exe", id + " " + puppetMasterUrl + " " + serviceUrl + " " + entryUrl);
+                return true;
+
+            } else {
+
+
+
+            }
+
+            return false;
         }
 
         public bool SubmitJob(string entryUrl, string file, string output, string s, string map) { return true; }
