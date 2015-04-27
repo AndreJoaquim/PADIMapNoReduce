@@ -24,4 +24,12 @@ namespace PADIMapNoReduce {
         
  
     }
+
+    public interface IPuppetMaster {
+
+        bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl);
+
+        bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl);
+    
+    }
 }
