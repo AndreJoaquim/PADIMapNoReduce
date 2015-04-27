@@ -21,11 +21,14 @@ namespace PADIMapNoReduce {
 
             int tcpPort = serviceUri.Port;
 
+            String[] segments = args[1].Split('/');
+            String remoteObjectName = segments[segments.Length - 1];
+
             //Create Service on this work
             TcpChannel channel = new TcpChannel(tcpPort);
 
             ChannelServices.RegisterChannel(channel, true);
-            RemotingConfiguration.RegisterWellKnownServiceType( typeof(WorkerServices), "Worker", WellKnownObjectMode.Singleton);
+            RemotingConfiguration.RegisterWellKnownServiceType(typeof(WorkerServices), remoteObjectName, WellKnownObjectMode.Singleton);
 
             //Inform JobTracker of this new worker 
             Uri jobTrackerUri;
