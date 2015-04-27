@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+
 
 namespace PADIMapNoReduce {
     public interface IMapper {
@@ -10,4 +12,16 @@ namespace PADIMapNoReduce {
     }
 
     public interface IWorker : IMapperTransfer { }
+
+
+    public interface IClient {
+
+        bool Submit(String inputFilePath, String outputDirectoryPath, String classImplementationPath, int numberOfSplits);
+
+        String getInputSplit(int workerId, int inputBeginIndex, int inputEndIndex);
+
+        bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result);
+        
+ 
+    }
 }
