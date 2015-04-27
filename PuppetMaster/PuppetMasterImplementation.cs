@@ -9,6 +9,7 @@ using System.ComponentModel;
 using PADIMapNoReduce;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.IO;
 
 namespace PuppetMaster
 {
@@ -44,7 +45,9 @@ namespace PuppetMaster
             if (puppetMasterUrl.Equals(url))
             {
                 // Start the worker process
-                Process.Start("Worker/bin/Worker.exe", id + " " + puppetMasterUrl + " " + serviceUrl);
+                string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
+
+                Process.Start(workerExecutablePath, id + " " + puppetMasterUrl + " " + serviceUrl);
 
                 // Console message
                 Console.WriteLine("Created worker " + id + " at " + serviceUrl + ".");

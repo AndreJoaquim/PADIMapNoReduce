@@ -12,7 +12,7 @@ namespace Client
 {
     class ClientImplementation : MarshalByRefObject, IClient{
 
-        bool Submit(string inputFilePath, string outputDirectoryPath, string classImplementationPath, int numberOfSplits){
+        public bool Submit(string inputFilePath, string outputDirectoryPath, string classImplementationPath, int numberOfSplits){
             
             //Send Class Implementation for workers
             string classMapperName = Path.GetFileNameWithoutExtension(classImplementationPath);
@@ -32,13 +32,14 @@ namespace Client
 
         }
 
-        string getInputSplit(int workerId, int inputBeginIndex, int inputEndIndex){
-            
+        public string getInputSplit(int workerId, int inputBeginIndex, int inputEndIndex)
+        {
+            return "";
         }
 
-        bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result)
+        public bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result)
         {
-            
+            return false;
         }
     }
 }

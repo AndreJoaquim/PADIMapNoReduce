@@ -53,6 +53,10 @@
       <Project>{2d129022-0922-40c3-9987-17789e3a225f}</Project>
       <Name>LibPADIMapNoReduce</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Worker\Worker.csproj">
+      <Project>{44ce6bd1-553b-4126-ba6a-d4cc13884563}</Project>
+      <Name>Worker</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

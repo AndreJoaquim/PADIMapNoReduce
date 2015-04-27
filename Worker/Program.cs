@@ -8,14 +8,14 @@ using System.Runtime.Remoting.Channels.Tcp;
 
 namespace PADIMapNoReduce {
 
-    class Program {
+    public class Program {
 
         /// <summary>
         /// Application entry point Main
         /// </summary>
         /// <param name="args">ID SERVICE-URL ENTRY-URL</param>
         ///
-        static void Main(string[] args) {
+        public static void Main(string[] args) {
 
             Uri serviceUri = new Uri(args[1]);
 
@@ -48,7 +48,9 @@ namespace PADIMapNoReduce {
             IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), args[2]);
 
             try{
-                mt.RegisterNewWorker(args[1], true);
+                List<string> workers = new List<string>();
+                workers.Add(args[1]);
+                mt.RegisterNewWorker(workers, true);
             }
             catch (SocketException)
             {
@@ -116,7 +118,7 @@ namespace PADIMapNoReduce {
                         IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
                         try {
-                            mt.RegisterNewWorker(workersServiceUrl[0], false);
+                            mt.RegisterNewWorker(workersUrl, false);
                         
                         } catch (SocketException) {
                         
@@ -132,7 +134,7 @@ namespace PADIMapNoReduce {
                         IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
                         try {
-                            mt.RegisterNewWorker(workersServiceUrl[0], false);
+                            mt.RegisterNewWorker(workersServiceUrl, false);
                         
                         } catch (SocketException) {
                         

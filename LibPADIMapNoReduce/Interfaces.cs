@@ -13,7 +13,7 @@ namespace PADIMapNoReduce {
 
     public interface IWorker : IMapperTransfer {
 
-        bool RegisterNewWorker(string workerServiceUrl, bool toBroadcast);
+        bool RegisterNewWorker(List<string> workerServiceUrl, bool toBroadcast);
     
     }
 
