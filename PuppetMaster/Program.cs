@@ -10,9 +10,9 @@ namespace PuppetMaster
     class Program
     {
 
-        public static const String WORKER = "WORKER";
-        public static const String SUBMIT = "SUBMIT";
-        public static const String WAIT = "WAIT";
+        public const string WORKER = "WORKER";
+        public const string SUBMIT = "SUBMIT";
+        public const string WAIT = "WAIT";
 
         static void Main(string[] args)
         {
@@ -21,10 +21,10 @@ namespace PuppetMaster
 
             while (true) {
 
-                string input = Console.ReadLine();
-                string[] split = input.Split(' ');
+                String input = Console.ReadLine();
+                String[] split = input.Split(' ');
 
-                string command = split[0];
+                String command = split[0];
 
                 switch (command) { 
                 
@@ -43,15 +43,62 @@ namespace PuppetMaster
 
                             if (split.Length == 5) {
                                 string entryUrl = split[4];
-                                createWorker(id, puppetMasterUrl, serviceUrl, entryUrl);
+                                puppetMaster.CreateWorker(id, puppetMasterUrl, serviceUrl, entryUrl);
                             } else {
-                                createWorker(id, puppetMasterUrl, serviceUrl);
+                                puppetMaster.CreateWorker(id, puppetMasterUrl, serviceUrl);
                             }
 
 
                         } else {
                             // Input error, it has more than 4 arguments
                             Console.WriteLine("Wrong usage. Usage: WORKER <ID> <PUPPETMASTER-URL> <SERVICE-URL> <ENTRY-URL>");
+                        }
+
+                        break;
+
+                    case SUBMIT:
+
+                        /*
+                         * SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> 
+                         */
+
+                        if (split.Length == 6)
+                        {
+
+                            string entryUrl = split[1];
+                            string file = split[2];
+                            string output = split[3];
+                            string s = split[4];
+                            string map = split[5];
+
+                            puppetMaster.SubmitJob(entryUrl, file, output, s, map);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP>");
+                        }
+
+                        break;
+
+                    case WAIT:
+
+                        /*
+                          * WAIT <SECS> 
+                          */
+
+                        if (split.Length == 6)
+                        {
+
+                            int secs = split[1].ToInt32();
+                            puppetMaster.Wait(secs);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: WAIT <SECS>");
                         }
 
                         break;
