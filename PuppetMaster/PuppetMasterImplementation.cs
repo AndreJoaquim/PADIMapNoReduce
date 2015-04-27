@@ -3,16 +3,53 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Diagnostics;
+using System.ComponentModel;
+
 using PADIMapNoReduce;
+using System.Net;
+using System.Net.NetworkInformation;
 
 namespace PuppetMaster
 {
     class PuppetMasterImplementation : MarshalByRefObject, IPuppetMaster
     {
 
+        private String url;
+
+        public PuppetMasterImplementation() {
+
+            // Get the IP's host
+            IPHostEntry host;
+            host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (IPAddress ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
+                    url = ip.ToString();
+                }
+            }
+
+            // Prepend the protocol and append the port
+            url = "tcp://" + url + ":" + NextFreeTcpPort() + "/PM" ;
+
+            // Console message
+            Console.WriteLine("Created PuppetMaster at " + url + ".");
+
+        }
+
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl)
         {
+
+            // If the PuppetMaster is my own
+            if (puppetMasterUrl.Equals(url)) {
+                // Start the worker process
+                Process.Start("Worker/bin/Worker.exe", id);
+
+            }
+
+
             return true;
+
         }
 
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl)
@@ -35,6 +72,28 @@ namespace PuppetMaster
         public bool FreezeC(string id) { return true; }
 
         public bool UnfreezeC(string id) { return true; }
+
+        private int NextFreeTcpPort() {
+
+            int portStartIndex = 20001;
+            int portEndIndex = 29999;
+
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
+
+            List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
+            int unusedPort = 0;
+
+            for (int port = portStartIndex; port <= portEndIndex; port++) {
+                if (!usedPorts.Contains(port)) {
+                    unusedPort = port;
+                    break;
+                }
+            }
+
+            return unusedPort;
+        
+        }
 
     }
 }
