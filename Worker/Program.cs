@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
@@ -28,32 +29,28 @@ namespace PADIMapNoReduce {
 
             //Inform JobTracker of this new worker 
             Uri jobTrackerUri;
+            bool toBroadcast;
 
-            if (args[2] != null) {
-                
+            if (args[2] != null) {                
                 jobTrackerUri = new Uri(args[2]);
-
+                toBroadcast = true;
             } else{
-
                 jobTrackerUri = new Uri(args[1]);
-
+                toBroadcast = false;
             }
 
-                TcpChannel jobTrackerChannel = new TcpChannel();
-                ChannelServices.RegisterChannel(jobTrackerChannel, true);
+            TcpChannel jobTrackerChannel = new TcpChannel();
+            ChannelServices.RegisterChannel(jobTrackerChannel, toBroadcast);
 
-                IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), args[2]);
+            IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), args[2]);
 
-                try{
-
-                    mt.RegisterNewWorker(args[1], true);
-                }
-                catch (SocketException)
-                {
-                    System.Console.WriteLine("Could not locate server");
-                }
-
-            
+            try{
+                mt.RegisterNewWorker(args[1], true);
+            }
+            catch (SocketException)
+            {
+                System.Console.WriteLine("Could not locate server");
+            }
 
             System.Console.WriteLine("Press <enter> to terminate server...");
             System.Console.ReadLine();
@@ -116,11 +113,12 @@ namespace PADIMapNoReduce {
                         IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
                         try {
-                            mt.RegisterNewWorker(workersUrl, false);
+                            mt.RegisterNewWorker(workersServiceUrl[0], false);
                         
                         } catch (SocketException) {
                         
                             System.Console.WriteLine("[REGISTERWORKER1] Could not locate server");
+                            return false;
                         }
 
                     } else { 
@@ -136,10 +134,13 @@ namespace PADIMapNoReduce {
                         } catch (SocketException) {
                         
                             System.Console.WriteLine("[REGISTERWORKER2] Could not locate server");
+                            return false;
                         }
                     }
                 }
             }
+
+            return true;
         }
 
     }
