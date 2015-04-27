@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{A56EAE84-DBA3-4A4A-ACF1-A46D5830753D}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Worker", "Worker\Worker.csproj", "{44CE6BD1-553B-4126-BA6A-D4CC13884563}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UserApplication", "UserApplication\UserApplication.csproj", "{498AD0BB-FED2-4B76-8387-B43B274E75C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PuppetMaster", "PuppetMaster\PuppetMaster.csproj", "{ED6388E8-41BE-4E07-A0D5-FB9F348879B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{498AD0BB-FED2-4B76-8387-B43B274E75C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{498AD0BB-FED2-4B76-8387-B43B274E75C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{498AD0BB-FED2-4B76-8387-B43B274E75C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED6388E8-41BE-4E07-A0D5-FB9F348879B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED6388E8-41BE-4E07-A0D5-FB9F348879B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED6388E8-41BE-4E07-A0D5-FB9F348879B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED6388E8-41BE-4E07-A0D5-FB9F348879B6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

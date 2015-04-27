@@ -41,7 +41,7 @@ namespace PADIMapNoReduce {
 
         bool Status();
 
-        bool SlowW(string id, int seconds);
+        bool SlowW(string id, int delayInSeconds);
 
         bool FrezeeW(string id);
 
