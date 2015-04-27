@@ -11,7 +11,11 @@ namespace PADIMapNoReduce {
         bool SendMapper(byte[] code, string className);
     }
 
-    public interface IWorker : IMapperTransfer { }
+    public interface IWorker : IMapperTransfer {
+
+        bool RegisterNewWorker(string workerServiceUrl, bool toBroadcast);
+    
+    }
 
 
     public interface IClient {
@@ -23,5 +27,29 @@ namespace PADIMapNoReduce {
         bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result);
         
  
+    }
+
+    public interface IPuppetMaster {
+
+        bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl);
+
+        bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl);
+
+        bool SubmitJob(string entryUrl, string file, string output, string s, string map);
+
+        bool Wait(int seconds);
+
+        bool Status();
+
+        bool SlowW(string id, int seconds);
+
+        bool FrezeeW(string id);
+
+        bool UnfreezeW(string id);
+
+        bool FreezeC(string id);
+
+        bool UnfreezeC(string id);
+    
     }
 }
