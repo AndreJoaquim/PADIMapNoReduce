@@ -13,7 +13,7 @@ namespace PADIMapNoReduce {
         /// <summary>
         /// Application entry point Main
         /// </summary>
-        /// <param name="args">ID SERVICE-URL ENTRY-URL</param>
+        /// <param name="args">ID SERVICE-URL $ENTRY-URL</param>
         ///
         public static void Main(string[] args) {
 
@@ -31,30 +31,29 @@ namespace PADIMapNoReduce {
             RemotingConfiguration.RegisterWellKnownServiceType(typeof(WorkerServices), remoteObjectName, WellKnownObjectMode.Singleton);
 
             //Inform JobTracker of this new worker 
-            Uri jobTrackerUri;
+            String jobTrackerUri;
             bool toBroadcast;
 
-            if (args[2] != null) {                
-                jobTrackerUri = new Uri(args[2]);
+            if (args.Length >= 3) { //With entry-level                
+                jobTrackerUri = args[2];
                 toBroadcast = true;
-            } else{
-                jobTrackerUri = new Uri(args[1]);
+            } else{ //Register itself as job tracket
+                jobTrackerUri = args[1];
                 toBroadcast = false;
             }
-
-            TcpChannel jobTrackerChannel = new TcpChannel();
-            ChannelServices.RegisterChannel(jobTrackerChannel, toBroadcast);
-
-            IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), args[2]);
+            
+            IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUri);
 
             try{
                 List<string> workers = new List<string>();
                 workers.Add(args[1]);
-                mt.RegisterNewWorker(workers, true);
+                mt.RegisterNewWorker(workers, toBroadcast);
+                mt.PrintStatus();
             }
-            catch (SocketException)
+            catch (SocketException e)
             {
-                System.Console.WriteLine("Could not locate server");
+                System.Console.WriteLine("[WORKERMAIN1]Could not locate server");
+                System.Console.WriteLine(e.StackTrace);
             }
 
             System.Console.WriteLine("Press <enter> to terminate server...");
@@ -69,7 +68,12 @@ namespace PADIMapNoReduce {
         private byte[] code;
         private string className;
 
-        private List<string> workersUrl;
+        public List<string> workersUrl;
+
+        public WorkerServices(){
+
+            workersUrl = new List<string>();
+        }
 
         public bool SendMapper(byte[] code, string className) {
 
@@ -97,49 +101,55 @@ namespace PADIMapNoReduce {
                     }
                 }
             }
-            throw (new System.Exception("could not invoke method"));
+            throw (new System.Exception("[SENDMAPPER1]could not invoke method"));
             return true;
         }
 
         public bool RegisterNewWorker(List<string> workersServiceUrl, bool toBroadcast){
 
-            //Add to myself 
+
             workersUrl.AddRange(workersServiceUrl);
 
             if (toBroadcast) { //Resend to new worker ther whole workers list
 
-                foreach (string worker in workersUrl) {
+                List<string> tmpWorkersUrl = new List<string>(workersUrl);
+                List<string> tmpWorkersServiceUrl = new List<string>(workersServiceUrl);
 
-                    if (worker == workersServiceUrl[0]) {
+                foreach (string worker in tmpWorkersUrl) {
 
-                        TcpChannel workerChannel = new TcpChannel();
-                        ChannelServices.RegisterChannel(workerChannel, true);
+                    if (worker.Equals(workersServiceUrl[0])) {//New worker
 
+                        Console.WriteLine("sdas");
                         IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
-                        try {
-                            mt.RegisterNewWorker(workersUrl, false);
-                        
-                        } catch (SocketException) {
-                        
+                        try
+                        {
+                            mt.RegisterNewWorker(tmpWorkersUrl, false);
+
+                        }catch (SocketException) {
+
                             System.Console.WriteLine("[REGISTERWORKER1] Could not locate server");
                             return false;
+                        }
+                        catch (Exception e){
+
+                            System.Console.WriteLine("[REGISTERWORKER3]" + e.StackTrace);
                         }
 
                     } else { 
 
-                        TcpChannel workerChannel = new TcpChannel();
-                        ChannelServices.RegisterChannel(workerChannel, true);
-
                         IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
                         try {
-                            mt.RegisterNewWorker(workersServiceUrl, false);
+                            mt.RegisterNewWorker(tmpWorkersServiceUrl, false);
                         
-                        } catch (SocketException) {
+                        } catch (SocketException){
                         
                             System.Console.WriteLine("[REGISTERWORKER2] Could not locate server");
                             return false;
+                        } catch (Exception e){
+
+                            System.Console.WriteLine("[REGISTERWORKER4]" + e.StackTrace);
                         }
                     }
                 }
@@ -148,5 +158,14 @@ namespace PADIMapNoReduce {
             return true;
         }
 
+        public bool PrintStatus() {
+
+            foreach (string worker in workersUrl)
+            {
+                Console.WriteLine(worker);
+            }
+
+            return true;
+        }
     }
 }

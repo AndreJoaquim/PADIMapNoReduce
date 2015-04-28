@@ -47,7 +47,7 @@ namespace PuppetMaster
                 // Start the worker process
                 string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
 
-                Process.Start(workerExecutablePath, id + " " + puppetMasterUrl + " " + serviceUrl);
+                Process.Start(workerExecutablePath, id + " " + serviceUrl);
 
                 // Console message
                 Console.WriteLine("Created worker " + id + " at " + serviceUrl + ".");
@@ -68,7 +68,15 @@ namespace PuppetMaster
             if (puppetMasterUrl.Equals(url))
             {
                 // Start the worker process
-                Process.Start("Worker/bin/Worker.exe", id + " " + puppetMasterUrl + " " + serviceUrl + " " + entryUrl);
+                string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
+
+                // Console message
+                Console.WriteLine("Created worker " + id + " at " + serviceUrl + ". Entry Level:" + entryUrl + ".");
+
+                Process.Start(workerExecutablePath, id + " " + serviceUrl + " " + entryUrl);
+
+                
+
                 return true;
 
             } else {
