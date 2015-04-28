@@ -96,6 +96,7 @@ namespace PuppetMaster
                         {
 
                             int secs = Int32.Parse(split[1]);
+                            //thread.sleep(secs*1000);
                             puppetMaster.Wait(secs);
 
                         }
@@ -118,6 +119,97 @@ namespace PuppetMaster
                         break;
 
                     case SLOWW:
+
+                        /*
+                          * SLOWW <ID> <delay-in-seconds>
+                          */
+
+                        if (split.Length == 3)
+                        {
+
+                            string id = split[1];
+                            int delayInSeconds = Int32.Parse(split[2]);
+
+                            puppetMaster.SlowW(id, delayInSeconds);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                        }
+
+                        break;
+
+                    case FREEZEW:
+
+                        /*
+                          * SLOWW <ID> <delay-in-seconds>
+                          */
+
+                        if (split.Length == 3)
+                        {
+
+                            string id = split[1];
+
+                            puppetMaster.FrezeeW(id);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                        }
+
+                        break;
+
+                    case UNFREEZEW:
+
+                        /*
+                          * SLOWW <ID> <delay-in-seconds>
+                          */
+
+                        if (split.Length == 3)
+                        {
+
+                            string id = split[1];
+                            int delayInSeconds = Int32.Parse(split[2]);
+
+                            puppetMaster.SlowW(id, delayInSeconds);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                        }
+
+                        break;
+
+                    case FREEZEC:
+
+                        /*
+                          * SLOWW <ID> <delay-in-seconds>
+                          */
+
+                        if (split.Length == 3)
+                        {
+
+                            string id = split[1];
+                            int delayInSeconds = Int32.Parse(split[2]);
+
+                            puppetMaster.SlowW(id, delayInSeconds);
+
+                        }
+                        else
+                        {
+                            // Input error, it has more than 4 arguments
+                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                        }
+
+                        break;
+
+                    case UNFREEZEC:
 
                         /*
                           * SLOWW <ID> <delay-in-seconds>

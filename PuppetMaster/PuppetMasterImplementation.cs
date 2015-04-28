@@ -88,21 +88,62 @@ namespace PuppetMaster
             return false;
         }
 
-        public bool SubmitJob(string entryUrl, string file, string output, string s, string map) { return true; }
+        public bool SubmitJob(string entryUrl, string file, string output, string s, string map) {
+            /*
+             // Start the client application
+                string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.vshost.exe");
+
+                // Console message
+                Console.WriteLine("Created client application to submit job request " + file + "at worker node in url " +  entryUrl + " with " + s + " splits and " + map + " dll.");
+
+                Process.Start(clientExecutablePath, file + " " + entryUrl + " " + s + " " + map);
+             
+             
+             */
+
+            return true; }
 
         public bool Wait(int seconds) { return true; }
 
-        public bool Status() { return true; }
+        public bool Status() { 
+            /*
+             this.workerList.first().PrintStatus();
+             */
+            return true; }
 
-        public bool SlowW(string id, int delayInSeconds) { return true; }
+        public bool SlowW(string id, int delayInSeconds) {
+            /*
+            this.workerList.first().SlowWorker(id, delayInSeconds);
+            */
+            return true;
+        }
 
-        public bool FrezeeW(string id) { return true; }
+        public bool FrezeeW(string id) {
+            /*
+            this.workerList.first().FreezeWorker(id);
+            */
+            return true; }
 
-        public bool UnfreezeW(string id) { return true; }
+        public bool UnfreezeW(string id) {
+            /*
+            this.workerList.first().UnFreezeWorker(id);
+            */
+            return true;
+        }
 
-        public bool FreezeC(string id) { return true; }
+        public bool FreezeC(string id){
+            /*
+            this.workerList.first().FreezeWorkerComunication(id);
+            */
+            return true;
+        }
 
-        public bool UnfreezeC(string id) { return true; }
+        public bool UnfreezeC(string id) {
+            /*
+            this.workerList.first().UnFreezeWorkerComunication(id);
+            */
+            return true;
+        }
 
         private int NextFreeTcpPort() {
 
