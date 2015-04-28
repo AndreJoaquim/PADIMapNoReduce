@@ -30,31 +30,49 @@ namespace PADIMapNoReduce {
             ChannelServices.RegisterChannel(channel, true);
             RemotingConfiguration.RegisterWellKnownServiceType(typeof(WorkerServices), remoteObjectName, WellKnownObjectMode.Singleton);
 
-            //Inform JobTracker of this new worker 
-            String jobTrackerUri;
-            bool toBroadcast;
-
-            if (args.Length >= 3) { //With entry-level                
-                jobTrackerUri = args[2];
-                toBroadcast = true;
-            } else{ //Register itself as job tracket
-                jobTrackerUri = args[1];
-                toBroadcast = false;
-            }
-            
-            IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUri);
-
+            //Register new worker in itself
             try{
-                List<string> workers = new List<string>();
-                workers.Add(args[1]);
-                mt.RegisterNewWorker(workers, toBroadcast);
-                mt.PrintStatus();
-            }
-            catch (SocketException e)
-            {
-                System.Console.WriteLine("[WORKERMAIN1]Could not locate server");
+
+                IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), serviceUri.ToString());
+
+                newWorkerObj.RegisterOwnWorker(serviceUri.ToString());
+
+            }catch(SocketException e){
+
+                System.Console.WriteLine("[WORKER_MAIN_1]Could not locate server");
+                System.Console.WriteLine(e.StackTrace);
+                
+            }catch(Exception e){
+
+                System.Console.WriteLine("[WORKER_MAIN_2]Could not locate server");
                 System.Console.WriteLine(e.StackTrace);
             }
+
+            //If outer jobtracker exists
+            if (args.Length >= 3) {
+
+                try{
+
+                    String jobTrackerUri = args[2];
+
+                    IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUri);
+
+                    //Broadcast to the network the new worker
+                    jobTrackerObj.BroadcastNewWorker(serviceUri.ToString());
+
+                }catch(SocketException e){
+
+                    System.Console.WriteLine("[WORKER_MAIN_3]Could not locate server");
+                    System.Console.WriteLine(e.StackTrace);
+                
+                }catch(Exception e){
+
+                    System.Console.WriteLine("[WORKER_MAIN_4]Could not locate server");
+                    System.Console.WriteLine(e.StackTrace);
+                
+                }
+            } 
+
 
             System.Console.WriteLine("Press <enter> to terminate server...");
             System.Console.ReadLine();
@@ -68,7 +86,8 @@ namespace PADIMapNoReduce {
         private byte[] code;
         private string className;
 
-        public List<string> workersUrl;
+        private string ownUrl;
+        private List<string> workersUrl;
 
         public WorkerServices(){
 
@@ -105,57 +124,76 @@ namespace PADIMapNoReduce {
             return true;
         }
 
-        public bool RegisterNewWorker(List<string> workersServiceUrl, bool toBroadcast){
+        public bool RegisterOwnWorker(string url) {
 
-
-            workersUrl.AddRange(workersServiceUrl);
-
-            if (toBroadcast) { //Resend to new worker ther whole workers list
-
-                List<string> tmpWorkersUrl = new List<string>(workersUrl);
-                List<string> tmpWorkersServiceUrl = new List<string>(workersServiceUrl);
-
-                foreach (string worker in tmpWorkersUrl) {
-
-                    if (worker.Equals(workersServiceUrl[0])) {//New worker
-
-                        Console.WriteLine("sdas");
-                        IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
-
-                        try
-                        {
-                            mt.RegisterNewWorker(tmpWorkersUrl, false);
-
-                        }catch (SocketException) {
-
-                            System.Console.WriteLine("[REGISTERWORKER1] Could not locate server");
-                            return false;
-                        }
-                        catch (Exception e){
-
-                            System.Console.WriteLine("[REGISTERWORKER3]" + e.StackTrace);
-                        }
-
-                    } else { 
-
-                        IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), worker);
-
-                        try {
-                            mt.RegisterNewWorker(tmpWorkersServiceUrl, false);
-                        
-                        } catch (SocketException){
-                        
-                            System.Console.WriteLine("[REGISTERWORKER2] Could not locate server");
-                            return false;
-                        } catch (Exception e){
-
-                            System.Console.WriteLine("[REGISTERWORKER4]" + e.StackTrace);
-                        }
-                    }
-                }
-            }
+            ownUrl = url;
 
             return true;
+        }
+
+        public bool BroadcastNewWorker(string url) {
+
+            //Add to own workers list
+            workersUrl.Add(url);
+
+            //Send to for each element of workerUrl the new worker Url
+            foreach (string worker in workersUrl) {
+
+                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker);
+
+                try {
+                    //Create list with the new worker url
+                    List<string> workers = new List<string>();
+                    workers.Add(url);
+                    //Send to an already existing worker the new one
+                    workerObj.RegisterNewWorkers(workers);
+
+                } catch (SocketException){
+
+                    System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR1] Could not locate server");
+                    return false;
+
+                } catch (Exception e){
+
+                    System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR2]" + e.StackTrace);
+                    return false;
+                }
+
+            }
+
+            //Send to the new worker a complete list of the workers urls
+            IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), url);
+
+            try {
+                //Create list with the new worker url
+                List<string> workers = new List<string>();
+                workers.AddRange(workersUrl);
+                //Send to an already existing worker the new one
+                newWorkerObj.RegisterNewWorkers(workers);
+
+            }
+            catch (SocketException)
+            {
+
+                System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR3] Could not locate server");
+                return false;
+
+            }
+            catch (Exception e)
+            {
+
+                System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR4]" + e.StackTrace);
+                return false;
+            }
+            
+            return true;
+        }
+
+        public bool RegisterNewWorkers(List<string> workerServiceUrl) {
+
+            workersUrl.AddRange(workerServiceUrl);
+            return true;
+
         }
 
         public bool PrintStatus() {
