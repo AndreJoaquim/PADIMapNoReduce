@@ -94,7 +94,16 @@ namespace PADIMapNoReduce {
             workersUrl = new List<string>();
         }
 
+
+        public 
+
         public bool SendMapper(byte[] code, string className) {
+
+            //Store code to be executed
+            this.code = code;
+
+            //Store className
+            this.className = className;
 
             Assembly assembly = Assembly.Load(code);
 
