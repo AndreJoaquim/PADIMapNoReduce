@@ -16,6 +16,8 @@ namespace Client
 
         private String url;
 
+        private static FileStream fs;
+
         public ClientImplementation(){
 
             // Get the IP's host
@@ -61,13 +63,76 @@ namespace Client
                 System.Console.WriteLine("[CLIENT_IMPLEMENTATION1] Could not request job");
             }
 
+            fs = new FileStream(inputFilePath, FileMode.Open);
+
             return true;
 
         }
 
         public string getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex)
         {
-            return "";
+
+
+
+            byte[] bytes = new byte[inputEndIndex - inputBeginIndex];
+
+
+
+            fs.Read(bytes, (int)inputBeginIndex, bytes.Length);
+
+
+            string singlechar;
+
+            if (inputBeginIndex != 0)
+            {
+                int i = 0;
+                singlechar = Encoding.UTF8.GetString(bytes, i, 1);
+                while (!singlechar.Equals('\n'))
+                {
+                    inputBeginIndex++;
+                    i++;
+                    singlechar = Encoding.UTF8.GetString(bytes, i, 1);
+                }
+                inputBeginIndex++;
+
+            }
+
+            singlechar = Encoding.UTF8.GetString(bytes, bytes.Length-1, 1);
+
+            byte[] temp = new byte[1];
+
+            byte[] temp2 = bytes;
+
+            byte[] temp3;
+
+
+            
+            while (!singlechar.Equals('\n'))
+            {
+                fs.Read(temp, (int)inputEndIndex, 1);
+                singlechar = Encoding.UTF8.GetString(temp, temp.Length - 1, 1);
+
+
+                temp3 = new byte[temp2.Length + temp.Length];
+                temp2.CopyTo(temp3, 0);
+                temp.CopyTo(temp3, temp2.Length);
+
+                temp2 = temp3;
+
+            }
+
+            temp3 = new byte[temp2.Length + temp.Length];
+            temp2.CopyTo(temp3, 0);
+            temp.CopyTo(temp3, temp2.Length);
+
+            temp2 = temp3;
+
+            byte[] sub = SubArray(temp2, (int)inputBeginIndex);
+
+
+            string s = Encoding.UTF8.GetString(sub, 0, sub.Length);
+
+            return s;
         }
 
         public bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result)
@@ -101,6 +166,13 @@ namespace Client
 
             return unusedPort;
 
+        }
+
+        public byte[] SubArray(byte[] data, int index)
+        {
+            byte[] result = new byte[data.Length-index];
+            data.CopyTo(result, index);
+            return result;
         }
     }
 }
