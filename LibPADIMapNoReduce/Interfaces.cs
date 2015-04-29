@@ -7,11 +7,7 @@ namespace PADIMapNoReduce {
         IList<KeyValuePair<string, string>> Map(string fileLine);
     }
 
-    public interface IMapperTransfer {
-        bool SendMapper(byte[] code, string className);
-    }
-
-    public interface IWorker : IMapperTransfer {
+    public interface IWorker {
 
         //Job Tracker Methods
         bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits);

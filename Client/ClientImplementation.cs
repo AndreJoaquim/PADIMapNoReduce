@@ -55,7 +55,7 @@ namespace Client
 
             try {
             
-                jobTrackerObj.RequestJob(inputLength,className, dllCode, numberOfSplits);        
+                jobTrackerObj.RequestJob(url,inputLength,className, dllCode, numberOfSplits);        
                 
             } catch (SocketException) {
                 System.Console.WriteLine("[CLIENT_IMPLEMENTATION1] Could not request job");
