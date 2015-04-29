@@ -5,23 +5,20 @@ using System;
 using System.Net.Sockets;
 using System.IO;
 
+using PADIMapNoReduce;
 
-namespace PADIMapNoReduce {
+
+namespace Client {
     class Client {
+
         static void Main(string[] args) {
-            string mapperName = args[0];
+
+            IClient clientImpl = new ClientImplementation();
+
             TcpChannel channel = new TcpChannel();
             ChannelServices.RegisterChannel(channel, true);
-            IWorker mt = (IWorker)Activator.GetObject(
-                typeof(IWorker),
-                "tcp://localhost:10000/Worker");
-            try {
-                byte[] code = File.ReadAllBytes(args[1]);
-                Console.WriteLine(mt.SendMapper(code, mapperName));
-            } catch (SocketException) {
-                System.Console.WriteLine("Could not locate server");
-            }
-            Console.ReadLine();
+
         }
+
     }
 }
