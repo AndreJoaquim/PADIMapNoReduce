@@ -6,8 +6,12 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Windows.Forms;
+
+using PADIMapNoReduce;
 
 namespace UserApplication
 {
@@ -16,16 +20,31 @@ namespace UserApplication
 
         private String inputFilePath;
         private String outputDirectoryPath;
-        private String ClassImplementationPath;
+        private String classImplementationPath;
 
+        private String clientUrl;
 
         public UserApplication()
         {
             InitializeComponent();
 
+            // Get the IP's host
+            IPHostEntry host;
+            host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (IPAddress ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    clientUrl = ip.ToString();
+                }
+            }
+
+            // Prepend the protocol and append the port
+            clientUrl = "tcp://" + clientUrl + ":" + NextFreeTcpPort() + "/C";
+
             // Start the worker process
             string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
-            Process.Start(clientExecutablePath);
+            Process.Start(clientExecutablePath, clientUrl);
 
         }
 
@@ -70,13 +89,13 @@ namespace UserApplication
             OpenFileDialog dialog = new OpenFileDialog();
 
             dialog.InitialDirectory = Application.StartupPath;
-            dialog.Filter = "C Sharp Class Files (*.cs)|*.cs|All files (*.*)|*.*";
+            dialog.Filter = "DLL Files (*.dll)|*.dll|All files (*.*)|*.*";
             
             if (dialog.ShowDialog() == DialogResult.OK)
             {
 
-                ClassImplementationPath = dialog.FileName;
-                lbClass.Text = ClassImplementationPath;
+                classImplementationPath = dialog.FileName;
+                lbClass.Text = classImplementationPath;
             }
         }
 
@@ -87,15 +106,45 @@ namespace UserApplication
             String className = tbClassName.Text.ToString();
 
             // Retrieve number of splits
-            String numberOfSplits = tbNrSplits.Text.ToString();
+            int numberOfSplits = Int32.Parse(tbNrSplits.Text.ToString());
 
             // Retrieve entry Url
             String entryUrl = tbEntryUrl.Text.ToString();
 
-            // Retrieve the client remote object
+            // Call the client remote object
+            IClient clientObj = (IClient) Activator.GetObject(typeof(IClient), clientUrl);
 
-
+            // Verify number of splits >= 1
+ 
             // Call the client with the submit call
+            clientObj.Submit(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits);
+        }
+
+        /* 
+         * Utility functions
+         */
+        private int NextFreeTcpPort()
+        {
+
+            int portStartIndex = 10001;
+            int portEndIndex = 19999;
+
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
+
+            List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
+            int unusedPort = 0;
+
+            for (int port = portStartIndex; port <= portEndIndex; port++)
+            {
+                if (!usedPorts.Contains(port))
+                {
+                    unusedPort = port;
+                    break;
+                }
+            }
+
+            return unusedPort;
 
         }
 
