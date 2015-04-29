@@ -12,20 +12,27 @@ namespace Client
 {
     class ClientImplementation : MarshalByRefObject, IClient{
 
-        public bool Submit(string inputFilePath, string outputDirectoryPath, string classImplementationPath, int numberOfSplits){
+        public bool Submit(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits){
             
-            //Send Class Implementation for workers
-            string classMapperName = Path.GetFileNameWithoutExtension(classImplementationPath);
-            
+            //Get jobtracker
             TcpChannel channel = new TcpChannel();
             ChannelServices.RegisterChannel(channel, true);
 
-            IWorker mt = (IWorker)Activator.GetObject(typeof(IWorker), "tcp://localhost:10000/W");
+            IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), entryUrl);
+
+            //Send Class Implementation for workers
+            //Get input file size
+            long inputLength = new FileInfo(inputFilePath).Length;
+
+            //Get DLL bytecode
+            byte[] dllCode = File.ReadAllBytes(classImplementationPath);
+
             try {
-                byte[] code = File.ReadAllBytes(classImplementationPath);
-                mt.SendMapper(code, classMapperName);
+            
+                jobTrackerObj.RequestJob(inputLength,className, dllCode, numberOfSplits);        
+                
             } catch (SocketException) {
-                System.Console.WriteLine("Could not locate server");
+                System.Console.WriteLine("[CLIENT_IMPLEMENTATION1] Could not request job");
             }
 
             return true;

@@ -145,6 +145,9 @@ namespace PuppetMaster
             return true;
         }
 
+        /* 
+         * Utility functions
+         */
         private int NextFreeTcpPort() {
 
             int portStartIndex = 20001;

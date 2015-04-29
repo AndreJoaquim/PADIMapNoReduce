@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using System.Threading;
 
 namespace PADIMapNoReduce {
 
@@ -95,7 +96,43 @@ namespace PADIMapNoReduce {
         }
 
 
-        public 
+        public bool RequestJob(long inputSize, string className, byte[] dllCode, int NumberOfSplits) {
+
+            //Create Queue with workers
+            Queue<string> availableWorker = new Queue<string>();
+            availableWorker.Enqueue(ownUrl);
+
+            foreach(string worker in workersUrl)
+                availableWorker.Enqueue(worker);
+                
+            //Split the inputFile between the works
+            long splitSize = inputSize / NumberOfSplits;
+
+            Semaphore queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
+
+            //Broadcast the job between the whole workers
+            for (long i = 0; i < inputSize; i += splitSize) {
+
+                long beginIndex = i;
+                long endIndex = i + splitSize - 1;
+
+                //Is last split?
+                if (inputSize - i < splitSize){
+                    endIndex = inputSize; 
+                }
+
+                //Run thread responsible for updating the queue
+                
+                //Test if there are workers available
+
+                //Send the job to worker
+
+
+            }
+
+                return true;
+        
+        }
 
         public bool SendMapper(byte[] code, string className) {
 
