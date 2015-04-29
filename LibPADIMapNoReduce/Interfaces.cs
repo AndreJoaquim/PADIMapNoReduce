@@ -13,7 +13,13 @@ namespace PADIMapNoReduce {
 
     public interface IWorker : IMapperTransfer {
 
-        bool RequestJob(long inputSize, string className, byte[] dllCode, int NumberOfSplits);
+        //Job Tracker Methods
+        bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits);
+
+        bool FinishProcessing(string workerUrl);
+
+        //Worker Methods
+        bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl);
 
         bool RegisterOwnWorker(string url);
 
@@ -29,7 +35,7 @@ namespace PADIMapNoReduce {
 
         bool Submit(String entryUrl, String inputFilePath, String outputDirectoryPath, String className, String classImplementationPath, int numberOfSplits);
 
-        String getInputSplit(int workerId, int inputBeginIndex, int inputEndIndex);
+        String getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex);
 
         bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result);
         

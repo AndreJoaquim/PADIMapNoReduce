@@ -84,11 +84,11 @@ namespace PADIMapNoReduce {
 
     internal class WorkerServices : MarshalByRefObject, IWorker {
 
-        private byte[] code;
-        private string className;
-
         private string ownUrl;
         private List<string> workersUrl;
+
+        private Queue<string> availableWorkerToJob;
+        private Semaphore queueWorkersSemaphore;
 
         public WorkerServices(){
 
@@ -96,19 +96,19 @@ namespace PADIMapNoReduce {
         }
 
 
-        public bool RequestJob(long inputSize, string className, byte[] dllCode, int NumberOfSplits) {
+        public bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits) {
 
             //Create Queue with workers
-            Queue<string> availableWorker = new Queue<string>();
-            availableWorker.Enqueue(ownUrl);
+            availableWorkerToJob = new Queue<string>();
+            availableWorkerToJob.Enqueue(ownUrl);
 
             foreach(string worker in workersUrl)
-                availableWorker.Enqueue(worker);
+                availableWorkerToJob.Enqueue(worker);
                 
             //Split the inputFile between the works
             long splitSize = inputSize / NumberOfSplits;
 
-            Semaphore queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
+            queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
 
             //Broadcast the job between the whole workers
             for (long i = 0; i < inputSize; i += splitSize) {
@@ -121,28 +121,37 @@ namespace PADIMapNoReduce {
                     endIndex = inputSize; 
                 }
 
-                //Run thread responsible for updating the queue
-                
                 //Test if there are workers available
+                queueWorkersSemaphore.WaitOne();
 
                 //Send the job to worker
+                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), availableWorkerToJob.Dequeue());
 
+                workerObj.RunJob(className, dllCode, beginIndex, endIndex, clientUrl, ownUrl);
 
             }
-
-                return true;
+            
+            return true;
         
         }
 
-        public bool SendMapper(byte[] code, string className) {
+        public bool FinishProcessing(string workerUrl) {
 
-            //Store code to be executed
-            this.code = code;
+            availableWorkerToJob.Enqueue(workerUrl);
 
-            //Store className
-            this.className = className;
+            queueWorkersSemaphore.Release(1);
 
-            Assembly assembly = Assembly.Load(code);
+            return true;
+        }
+
+        public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl) {
+
+            // Get input split
+            IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
+
+            string input = clientObj.getInputSplit(0, beginIndex, endIndex);
+
+            Assembly assembly = Assembly.Load(dllCode);
 
             // Walk through each type in the assembly looking for our class
             foreach (Type type in assembly.GetTypes()) {
@@ -155,20 +164,33 @@ namespace PADIMapNoReduce {
                         object ClassObj = Activator.CreateInstance(type);
 
                         // Dynamically Invoke the method
-                        object[] args = new object[] { "testValue" };
+                        object[] args = new object[] { input };
                         object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
-                        IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>) resultObject;
+                        IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>)resultObject;
+                       
                         Console.WriteLine("Map call result was: ");
+                        
                         foreach (KeyValuePair<string, string> p in result) {
                             Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
                         }
+
+                        clientObj.sendProcessedSplit(0, result);
+
+                        IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTackerUrl);
+
+                        jobTracker.FinishProcessing(ownUrl);
+
                         return true;
+
                     }
+
                 }
+
             }
-            throw (new System.Exception("[SENDMAPPER1]could not invoke method"));
-            return true;
+            throw (new System.Exception("[RUN_JOB1]could not invoke method"));
+
         }
+
 
         public bool RegisterOwnWorker(string url) {
 
