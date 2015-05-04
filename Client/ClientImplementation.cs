@@ -42,25 +42,30 @@ namespace Client
 
         public bool Submit(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits){
             
-            //Get jobtracker
-            TcpChannel channel = new TcpChannel();
-            ChannelServices.RegisterChannel(channel, true);
+            Console.WriteLine("[SUBMIT] Connecting to Job Tracker at " + entryUrl + ".");
 
-            IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), entryUrl);
+            IWorker jobTrackerObj = (IWorker) Activator.GetObject(typeof(IWorker), entryUrl);
 
-            //Send Class Implementation for workers
-            //Get input file size
+            Console.WriteLine("[SUBMIT] Connected!");
+
+            // Send Class Implementation for workers
+            // Get input file size
             long inputLength = new FileInfo(inputFilePath).Length;
+            Console.WriteLine("[SUBMIT] Input length: " + inputLength + ".");
 
-            //Get DLL bytecode
+
+            // Get DLL bytecode
             byte[] dllCode = File.ReadAllBytes(classImplementationPath);
+            Console.WriteLine("[SUBMIT] Read DLL file.");
 
             try {
-            
-                jobTrackerObj.RequestJob(url,inputLength,className, dllCode, numberOfSplits);        
+
+                Console.WriteLine("[SUBMIT] Requesting job...");
+                jobTrackerObj.RequestJob(url, inputLength,className, dllCode, numberOfSplits);        
                 
             } catch (SocketException) {
-                System.Console.WriteLine("[CLIENT_IMPLEMENTATION1] Could not request job");
+                System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERR1] Could not request job.");
+                return false;
             }
 
             fs = new FileStream(inputFilePath, FileMode.Open);
@@ -72,14 +77,9 @@ namespace Client
         public string getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex)
         {
 
-
-
             byte[] bytes = new byte[inputEndIndex - inputBeginIndex];
 
-
-
             fs.Read(bytes, (int)inputBeginIndex, bytes.Length);
-
 
             string singlechar;
 
@@ -104,14 +104,11 @@ namespace Client
             byte[] temp2 = bytes;
 
             byte[] temp3;
-
-
             
             while (!singlechar.Equals('\n'))
             {
                 fs.Read(temp, (int)inputEndIndex, 1);
                 singlechar = Encoding.UTF8.GetString(temp, temp.Length - 1, 1);
-
 
                 temp3 = new byte[temp2.Length + temp.Length];
                 temp2.CopyTo(temp3, 0);
@@ -128,7 +125,6 @@ namespace Client
             temp2 = temp3;
 
             byte[] sub = SubArray(temp2, (int)inputBeginIndex);
-
 
             string s = Encoding.UTF8.GetString(sub, 0, sub.Length);
 

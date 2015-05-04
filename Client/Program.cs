@@ -13,11 +13,19 @@ namespace Client {
 
         static void Main(string[] args) {
 
-            IClient clientImpl = new ClientImplementation();
+            Uri clientUri = new Uri(args[0]);
 
-            TcpChannel channel = new TcpChannel();
+            int tcpPort = clientUri.Port;
+
+            String[] segments = args[0].Split('/');
+            String remoteObjectName = segments[segments.Length - 1];
+
+            TcpChannel channel = new TcpChannel(tcpPort);
             ChannelServices.RegisterChannel(channel, true);
+            RemotingConfiguration.RegisterWellKnownServiceType(typeof(ClientImplementation), remoteObjectName, WellKnownObjectMode.Singleton);
 
+            System.Console.WriteLine("Press <enter> to terminate client...");
+            System.Console.ReadLine();
         }
 
     }
