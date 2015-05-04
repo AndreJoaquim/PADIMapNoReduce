@@ -130,7 +130,6 @@ namespace PuppetMaster
                         if (split.Length == 7)
                         {
 
-
                             String clientUrl = "";
 
                             // Get the IP
@@ -147,6 +146,7 @@ namespace PuppetMaster
                             string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
                             Process.Start(clientExecutablePath, clientUrl);
 
+                            // Get the arguments
                             string entryUrl = split[1];
                             string file = split[2];
                             string output = split[3];
@@ -154,6 +154,14 @@ namespace PuppetMaster
                             string classImplementationPath = split[5];
                             int numberOfSplits = int.Parse(split[6]);
 
+                            // Probably not the best approach...
+                            // Our test files and output directory are in the Puppet Master .exe's directory
+                            string path = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + @"\files\";
+                            file = path + file;
+                            output = path + output;
+                            classImplementationPath = path + classImplementationPath;
+
+                            // Submit job to the puppetMaster Impl
                             puppetMaster.SubmitJob(entryUrl, file, output, className, classImplementationPath, numberOfSplits);
 
                         }
@@ -175,7 +183,6 @@ namespace PuppetMaster
                         {
 
                             int secs = Int32.Parse(split[1]);
-                            //thread.sleep(secs*1000);
                             puppetMaster.Wait(secs);
 
                         }
