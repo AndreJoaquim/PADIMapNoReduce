@@ -20,7 +20,7 @@ namespace PuppetMaster
 
         // MACROS
         public static const string CLIENT_PORT = "CLIENT_PORT";
-        public static const string PUPPET_MASTER_PORT = "PM_Port";
+        public static const string PUPPET_MASTER_PORT = "PM_PORT";
 
         // Commands
         public const string WORKER = "WORKER";
