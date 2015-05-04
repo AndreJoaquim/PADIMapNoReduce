@@ -75,8 +75,6 @@ namespace PuppetMaster
 
                 Process.Start(workerExecutablePath, id + " " + serviceUrl + " " + entryUrl);
 
-                
-
                 return true;
 
             } else {
