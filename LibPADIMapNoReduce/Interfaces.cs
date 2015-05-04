@@ -44,7 +44,7 @@ namespace PADIMapNoReduce {
 
         bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl);
 
-        bool SubmitJob(string entryUrl, string file, string output, string s, string map);
+        bool SubmitJob(String entryUrl, String inputFilePath, String outputDirectoryPath, String className, String classImplementationPath, int numberOfSplits);
 
         bool Wait(int seconds);
 

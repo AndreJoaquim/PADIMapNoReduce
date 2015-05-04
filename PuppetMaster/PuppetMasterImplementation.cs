@@ -111,7 +111,7 @@ namespace PuppetMaster
             return false;
         }
 
-        public bool SubmitJob(string entryUrl, string file, string output, string s, string map) {
+        public bool SubmitJob(String entryUrl, String inputFilePath, String outputDirectoryPath, String className, String classImplementationPath, int numberOfSplits) {
             /*
              // Start the client application
                 string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.vshost.exe");

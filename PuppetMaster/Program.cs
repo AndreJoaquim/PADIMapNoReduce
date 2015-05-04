@@ -10,6 +10,8 @@ using System.Runtime.Remoting.Channels.Tcp;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Threading;
+using System.IO;
+using System.Diagnostics;
 
 namespace PuppetMaster
 {
@@ -47,7 +49,7 @@ namespace PuppetMaster
             String remoteObjectName = "PM";
 
             // Prepend the protocol and append the port
-            int tcpPort = NextFreeTcpPort();
+            int tcpPort = NextFreeTcpPort(20001,29999);
             url = "tcp://" + url + ":" + tcpPort + "/" + remoteObjectName;
 
             System.Environment.SetEnvironmentVariable("PM_Port", tcpPort.ToString(), EnvironmentVariableTarget.Process);
@@ -98,6 +100,8 @@ namespace PuppetMaster
                          */
 
                         if(split.Length <= 5){
+                
+                        //Create Client
 
                             string id = split[1];
                             string puppetMasterUrl = split[2];
@@ -123,16 +127,34 @@ namespace PuppetMaster
                          * SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> 
                          */
 
-                        if (split.Length == 6)
+                        if (split.Length == 7)
                         {
+
+
+                            String clientUrl = "";
+
+                            // Get the IP
+                            foreach (IPAddress ip in host.AddressList) {
+                                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
+                                    clientUrl = ip.ToString();
+                                }
+                            }
+
+                            // Prepend the protocol and append the port
+                            clientUrl = "tcp://" + clientUrl + ":" + NextFreeTcpPort(10001, 19999) + "/C";
+
+                            // Start the worker process
+                            string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
+                            Process.Start(clientExecutablePath, clientUrl);
 
                             string entryUrl = split[1];
                             string file = split[2];
                             string output = split[3];
-                            string s = split[4];
-                            string map = split[5];
+                            string className = split[4];
+                            string classImplementationPath = split[5];
+                            int numberOfSplits = int.Parse(split[6]);
 
-                            puppetMaster.SubmitJob(entryUrl, file, output, s, map);
+                            puppetMaster.SubmitJob(entryUrl, file, output, className, classImplementationPath, numberOfSplits);
 
                         }
                         else
@@ -298,11 +320,10 @@ namespace PuppetMaster
         /* 
          * Utility functions
          */
-        private static int NextFreeTcpPort()
-        {
+        private static int NextFreeTcpPort(int lowerBound, int highBound) {
 
-            int portStartIndex = 20001;
-            int portEndIndex = 29999;
+            int portStartIndex = lowerBound;
+            int portEndIndex = highBound;
 
             IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
             IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
@@ -310,10 +331,8 @@ namespace PuppetMaster
             List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
             int unusedPort = 0;
 
-            for (int port = portStartIndex; port <= portEndIndex; port++)
-            {
-                if (!usedPorts.Contains(port))
-                {
+            for (int port = portStartIndex; port <= portEndIndex; port++) {
+                if (!usedPorts.Contains(port)) {
                     unusedPort = port;
                     break;
                 }
@@ -322,6 +341,8 @@ namespace PuppetMaster
             return unusedPort;
 
         }
+
+        
 
     }
 }
