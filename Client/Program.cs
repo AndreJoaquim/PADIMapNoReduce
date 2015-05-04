@@ -6,9 +6,11 @@ using System.Net.Sockets;
 using System.IO;
 
 using PADIMapNoReduce;
+using System.Diagnostics;
 
 
 namespace Client {
+
     class Client {
 
         static void Main(string[] args) {
@@ -24,6 +26,9 @@ namespace Client {
             ChannelServices.RegisterChannel(channel, true);
             RemotingConfiguration.RegisterWellKnownServiceType(typeof(ClientImplementation), remoteObjectName, WellKnownObjectMode.Singleton);
 
+            System.Environment.SetEnvironmentVariable("ClientTcpPort", tcpPort.ToString(), EnvironmentVariableTarget.Process);
+
+            System.Console.WriteLine("Created Client on " + clientUri.ToString() );
             System.Console.WriteLine("Press <enter> to terminate client...");
             System.Console.ReadLine();
         }

@@ -117,7 +117,8 @@ namespace UserApplication
             // Verify number of splits >= 1
  
             // Call the client with the submit call
-            clientObj.Submit(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits);
+            bool value = clientObj.Submit(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits);
+            
         }
 
         /* 

@@ -16,7 +16,12 @@ namespace Client
 
         private String url;
 
-        private static FileStream fs;
+        private string entryUrl;
+        private string inputFilePath;
+        private string outputDirectoryPath;
+        private string className;
+        private string classImplementationPath;
+        private int numberOfSplits;
 
         public ClientImplementation(){
 
@@ -29,20 +34,26 @@ namespace Client
                 {
                     url = ip.ToString();
                 }
+
             }
 
+            int tcpPort = int.Parse(System.Environment.GetEnvironmentVariable("ClientTcpPort", EnvironmentVariableTarget.Process));
+
             // Prepend the protocol and append the port
-            url = "tcp://" + url + ":" + NextFreeTcpPort() + "/C";
-
-            // Console message
-            Console.WriteLine("Created Client at " + url + ".");
-
+            url = "tcp://" + url + ":" + tcpPort + "/C";
 
         }
 
         public bool Submit(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits){
-            
-            Console.WriteLine("[SUBMIT] Connecting to Job Tracker at " + entryUrl + ".");
+
+            this.entryUrl = entryUrl;
+            this.inputFilePath = inputFilePath;
+            this.outputDirectoryPath = outputDirectoryPath;
+            this.className = className;
+            this.classImplementationPath = classImplementationPath;
+            this.numberOfSplits = numberOfSplits;
+
+            System.Console.WriteLine("[SUBMIT] Connecting to Job Tracker at " + entryUrl + ".");
 
             IWorker jobTrackerObj = (IWorker) Activator.GetObject(typeof(IWorker), entryUrl);
 
@@ -59,16 +70,13 @@ namespace Client
             Console.WriteLine("[SUBMIT] Read DLL file.");
 
             try {
-
                 Console.WriteLine("[SUBMIT] Requesting job...");
-                jobTrackerObj.RequestJob(url, inputLength,className, dllCode, numberOfSplits);        
+                jobTrackerObj.RequestJob(url, inputLength, className, dllCode, numberOfSplits);        
                 
             } catch (SocketException) {
                 System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERR1] Could not request job.");
                 return false;
             }
-
-            fs = new FileStream(inputFilePath, FileMode.Open);
 
             return true;
 
@@ -76,6 +84,8 @@ namespace Client
 
         public string getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex)
         {
+
+            FileStream fs = new FileStream(inputFilePath, FileMode.Open);
 
             byte[] bytes = new byte[inputEndIndex - inputBeginIndex];
 
