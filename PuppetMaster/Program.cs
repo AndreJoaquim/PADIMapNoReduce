@@ -20,6 +20,9 @@ namespace PuppetMaster
         public const string FREEZEC = "FREEZEC";
         public const string UNFREEZEC = "UNFREEZEC";
 
+        // Used for Debug purposes
+        public const string SETUP = "SETUP";
+
         static void Main(string[] args)
         {
 
@@ -229,6 +232,16 @@ namespace PuppetMaster
                             // Input error, it has more than 4 arguments
                             Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
                         }
+
+                        break;
+
+                    case SETUP:
+
+                        // Create WORKER 1
+                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30001/W");
+                        // Create WORKER 2 and 3
+                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30002/W", "tcp://localhost:30001/W");
+                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30003/W", "tcp://localhost:30002/W");
 
                         break;
                 
