@@ -18,6 +18,11 @@ namespace PuppetMaster
     class Program
     {
 
+        // MACROS
+        public static const string CLIENT_PORT = "CLIENT_PORT";
+        public static const string PUPPET_MASTER_PORT = "PM_Port";
+
+        // Commands
         public const string WORKER = "WORKER";
         public const string SUBMIT = "SUBMIT";
         public const string WAIT = "WAIT";
@@ -46,13 +51,15 @@ namespace PuppetMaster
                 }
             }
 
+            CreateClient(url);
+
             String remoteObjectName = "PM";
 
             // Prepend the protocol and append the port
             int tcpPort = NextFreeTcpPort(20001,29999);
             url = "tcp://" + url + ":" + tcpPort + "/" + remoteObjectName;
 
-            System.Environment.SetEnvironmentVariable("PM_Port", tcpPort.ToString(), EnvironmentVariableTarget.Process);
+            System.Environment.SetEnvironmentVariable(PUPPET_MASTER_PORT, tcpPort.ToString(), EnvironmentVariableTarget.Process);
 
             // Register the Puppet Master Service
             TcpChannel channel = new TcpChannel(tcpPort);
@@ -129,22 +136,6 @@ namespace PuppetMaster
 
                         if (split.Length == 7)
                         {
-
-                            String clientUrl = "";
-
-                            // Get the IP
-                            foreach (IPAddress ip in host.AddressList) {
-                                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
-                                    clientUrl = ip.ToString();
-                                }
-                            }
-
-                            // Prepend the protocol and append the port
-                            clientUrl = "tcp://" + clientUrl + ":" + NextFreeTcpPort(10001, 19999) + "/C";
-
-                            // Start the worker process
-                            string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
-                            Process.Start(clientExecutablePath, clientUrl);
 
                             // Get the arguments
                             string entryUrl = split[1];
@@ -322,6 +313,23 @@ namespace PuppetMaster
 
             }
 
+        }
+
+        private static bool CreateClient(String url) {
+
+            String clientUrl = "";
+            int port = NextFreeTcpPort(10001, 19999);
+            // Prepend the protocol and append the port
+            clientUrl = "tcp://" + url + ":" + port + "/C";
+
+            System.Environment.SetEnvironmentVariable(CLIENT_PORT, port.ToString(), EnvironmentVariableTarget.Process);
+
+            // Start the worker process
+            string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
+            Process.Start(clientExecutablePath, clientUrl);
+
+            return true;
+        
         }
 
         /* 
