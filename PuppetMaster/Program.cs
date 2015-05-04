@@ -19,7 +19,7 @@ namespace PuppetMaster
     {
 
         // MACROS
-        public static const string CLIENT_PORT = "CLIENT_PORT";
+        public static const string CLIENT_URI = "CLIENT_URI";
         public static const string PUPPET_MASTER_PORT = "PM_PORT";
 
         // Commands
@@ -322,7 +322,7 @@ namespace PuppetMaster
             // Prepend the protocol and append the port
             clientUrl = "tcp://" + url + ":" + port + "/C";
 
-            System.Environment.SetEnvironmentVariable(CLIENT_PORT, port.ToString(), EnvironmentVariableTarget.Process);
+            System.Environment.SetEnvironmentVariable(CLIENT_URI, clientUrl, EnvironmentVariableTarget.Process);
 
             // Start the worker process
             string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.exe");
