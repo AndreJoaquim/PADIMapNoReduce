@@ -72,7 +72,30 @@ namespace PADIMapNoReduce {
                     System.Console.WriteLine(e.StackTrace);
                 
                 }
-            } 
+            }
+
+
+            try
+            {
+
+                IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), serviceUri.ToString());
+
+                newWorkerObj.PrintStatus();
+
+            }
+            catch (SocketException e)
+            {
+
+                System.Console.WriteLine("[WORKER_MAIN_1]Could not locate server");
+                System.Console.WriteLine(e.StackTrace);
+
+            }
+            catch (Exception e)
+            {
+
+                System.Console.WriteLine("[WORKER_MAIN_2]Could not locate server");
+                System.Console.WriteLine(e.StackTrace);
+            }
 
 
             System.Console.WriteLine("Press <enter> to terminate server...");
@@ -207,35 +230,41 @@ namespace PADIMapNoReduce {
             //Send to for each element of workerUrl the new worker Url
             foreach (string worker in workersUrl) {
 
-                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker);
+                if(!worker.Equals(url)){
 
-                try {
-                    //Create list with the new worker url
-                    List<string> workers = new List<string>();
-                    workers.Add(url);
-                    //Send to an already existing worker the new one
-                    workerObj.RegisterNewWorkers(workers);
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
-                } catch (SocketException){
+                    try {
+                        //Create list with the new worker url
+                        List<string> workers = new List<string>();
+                        workers.Add(url);
+                        //Send to an already existing worker the new one
+                        workerObj.RegisterNewWorkers(workers);
 
-                    System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR1] Could not locate server");
-                    return false;
+                    } catch (SocketException){
 
-                } catch (Exception e){
+                        System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR1] Could not locate server");
+                        return false;
 
-                    System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR2]" + e.StackTrace);
-                    return false;
+                    } catch (Exception e){
+
+                        System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR2] " + e.StackTrace);
+                        return false;
+                    }
+
                 }
 
             }
 
             //Send to the new worker a complete list of the workers urls
-            IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), url);
+            IWorker newWorkerObj = (IWorker) Activator.GetObject(typeof(IWorker), url);
 
             try {
                 //Create list with the new worker url
                 List<string> workers = new List<string>();
+                workers.Add(ownUrl);
                 workers.AddRange(workersUrl);
+                workers.Remove(url);
                 //Send to an already existing worker the new one
                 newWorkerObj.RegisterNewWorkers(workers);
 
@@ -265,6 +294,11 @@ namespace PADIMapNoReduce {
         }
 
         public bool PrintStatus() {
+
+            Console.WriteLine("STATUS: ");
+            Console.WriteLine("My Url: " + ownUrl);
+
+            Console.WriteLine("Connections: ");
 
             foreach (string worker in workersUrl)
             {

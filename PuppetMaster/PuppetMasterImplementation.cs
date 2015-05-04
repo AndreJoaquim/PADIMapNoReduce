@@ -10,13 +10,18 @@ using PADIMapNoReduce;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.IO;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting;
 
 namespace PuppetMaster
 {
     class PuppetMasterImplementation : MarshalByRefObject, IPuppetMaster
     {
 
+        private String mIp;
         private String url;
+        private int tcpPort;
 
         public PuppetMasterImplementation() {
 
@@ -25,36 +30,47 @@ namespace PuppetMaster
             host = Dns.GetHostEntry(Dns.GetHostName());
             foreach (IPAddress ip in host.AddressList)
             {
-                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
-                    url = ip.ToString();
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                {
+                    mIp = ip.ToString();
                 }
             }
 
-            // Prepend the protocol and append the port
-            url = "tcp://" + url + ":" + NextFreeTcpPort() + "/PM" ;
+            String remoteObjectName = "PM";
 
-            // Console message
-            Console.WriteLine("Created PuppetMaster at " + url + ".");
+            // Prepend the protocol and append the port
+            tcpPort = int.Parse(System.Environment.GetEnvironmentVariable("PM_Port", EnvironmentVariableTarget.Process));
+            url = "tcp://" + mIp + ":" + tcpPort + "/" + remoteObjectName;
 
         }
 
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl)
         {
 
+            // Convert the localhost's to local IP address
+            Uri puppetMasterUri = ConvertLocalhostInUri(puppetMasterUrl);
+            Uri serviceUri = ConvertLocalhostInUri(serviceUrl);
+
             // If the PuppetMaster is my own
-            if (puppetMasterUrl.Equals(url))
+            if (puppetMasterUri.Equals(url))
             {
                 // Start the worker process
                 string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
 
-                Process.Start(workerExecutablePath, id + " " + serviceUrl);
+                Process.Start(workerExecutablePath, id + " " + serviceUri.ToString());
 
                 // Console message
-                Console.WriteLine("Created worker " + id + " at " + serviceUrl + ".");
+                Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ".");
 
                 return true;
 
             } else {
+
+                // Retrieve the remote Puppet Master object
+                IPuppetMaster puppetMasterObj = (IPuppetMaster) Activator.GetObject(typeof(IPuppetMaster), puppetMasterUri.ToString());
+
+                // Create the worker in the remote Puppet Master
+                puppetMasterObj.CreateWorker(id, puppetMasterUri.ToString(), serviceUri.ToString());
 
             }
 
@@ -64,22 +80,31 @@ namespace PuppetMaster
 
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl, string entryUrl)
         {
+
+            // Convert the localhost's to local IP address
+            Uri puppetMasterUri = ConvertLocalhostInUri(puppetMasterUrl);
+            Uri serviceUri = ConvertLocalhostInUri(serviceUrl);
+            Uri entryUri = ConvertLocalhostInUri(entryUrl);
+
             // If the PuppetMaster is my own
-            if (puppetMasterUrl.Equals(url))
+            if (puppetMasterUri.Equals(url))
             {
                 // Start the worker process
                 string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
 
                 // Console message
-                Console.WriteLine("Created worker " + id + " at " + serviceUrl + ". Entry Level:" + entryUrl + ".");
-
-                Process.Start(workerExecutablePath, id + " " + serviceUrl + " " + entryUrl);
+                Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ". Entry Level:" + entryUri.ToString() + ".");
+                Process.Start(workerExecutablePath, id + " " + serviceUri.ToString() + " " + entryUri.ToString());
 
                 return true;
 
             } else {
 
+                // Retrieve the remote Puppet Master object
+                IPuppetMaster puppetMasterObj = (IPuppetMaster)Activator.GetObject(typeof(IPuppetMaster), puppetMasterUri.ToString());
 
+                // Create the worker in the remote Puppet Master
+                puppetMasterObj.CreateWorker(id, puppetMasterUri.ToString(), serviceUri.ToString(), entryUri.ToString());
 
             }
 
@@ -143,29 +168,20 @@ namespace PuppetMaster
             return true;
         }
 
-        /* 
-         * Utility functions
-         */
-        private int NextFreeTcpPort() {
+        private Uri ConvertLocalhostInUri(String url) {
 
-            int portStartIndex = 20001;
-            int portEndIndex = 29999;
+            Uri uri = new Uri(url);
 
-            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
-
-            List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
-            int unusedPort = 0;
-
-            for (int port = portStartIndex; port <= portEndIndex; port++) {
-                if (!usedPorts.Contains(port)) {
-                    unusedPort = port;
-                    break;
-                }
+            // Check if the host is the local machine i.e. localhost
+            if (uri.Host.Equals("localhost"))
+            {
+                UriBuilder builder = new UriBuilder(uri);
+                builder.Host = mIp;
+                uri = builder.Uri;
             }
 
-            return unusedPort;
-        
+            return uri;
+
         }
 
     }

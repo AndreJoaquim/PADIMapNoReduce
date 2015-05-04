@@ -4,6 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PADIMapNoReduce;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Tcp;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Threading;
 
 namespace PuppetMaster
 {
@@ -26,7 +32,35 @@ namespace PuppetMaster
         static void Main(string[] args)
         {
 
-            IPuppetMaster puppetMaster = new PuppetMasterImplementation();
+            String url = "";
+
+            // Get the IP's host
+            IPHostEntry host;
+            host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (IPAddress ip in host.AddressList)
+            {
+                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
+                    url = ip.ToString();
+                }
+            }
+
+            String remoteObjectName = "PM";
+
+            // Prepend the protocol and append the port
+            int tcpPort = NextFreeTcpPort();
+            url = "tcp://" + url + ":" + tcpPort + "/" + remoteObjectName;
+
+            System.Environment.SetEnvironmentVariable("PM_Port", tcpPort.ToString(), EnvironmentVariableTarget.Process);
+
+            // Register the Puppet Master Service
+            TcpChannel channel = new TcpChannel(tcpPort);
+            ChannelServices.RegisterChannel(channel, true);
+            RemotingConfiguration.RegisterWellKnownServiceType(typeof(PuppetMasterImplementation), remoteObjectName, WellKnownObjectMode.Singleton);
+
+            // Console message
+            Console.WriteLine("Created PuppetMaster at " + url + ".");
+
+            IPuppetMaster puppetMaster = (IPuppetMaster) Activator.GetObject(typeof(IPuppetMaster), url);
 
             while (true) {
 
@@ -35,7 +69,27 @@ namespace PuppetMaster
 
                 string command = split[0];
 
-                switch (command) { 
+                switch (command) {
+
+                    case SETUP:
+
+                        Console.WriteLine("-- Running setup...");
+
+                        // Create WORKER 1
+                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30001/W");
+                        Thread.Sleep(4000);
+                        // Create WORKER 2
+                        puppetMaster.CreateWorker("2", "tcp://localhost:20001/PM", "tcp://localhost:30002/W", "tcp://localhost:30001/W");
+                        Thread.Sleep(4000);
+                        // Create WORKER 3
+                        puppetMaster.CreateWorker("3", "tcp://localhost:20001/PM", "tcp://localhost:30003/W", "tcp://localhost:30002/W");
+                        Thread.Sleep(4000);
+                        // Create WORKER 4
+                        puppetMaster.CreateWorker("4", "tcp://localhost:20001/PM", "tcp://localhost:30004/W", "tcp://localhost:30002/W");
+
+                        Console.WriteLine("-- Setup concluded!");
+
+                        break;
                 
                     case WORKER:
 
@@ -234,20 +288,38 @@ namespace PuppetMaster
                         }
 
                         break;
-
-                    case SETUP:
-
-                        // Create WORKER 1
-                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30001/W");
-                        // Create WORKER 2 and 3
-                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30002/W", "tcp://localhost:30001/W");
-                        puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30003/W", "tcp://localhost:30002/W");
-
-                        break;
                 
                 }
 
             }
+
+        }
+
+        /* 
+         * Utility functions
+         */
+        private static int NextFreeTcpPort()
+        {
+
+            int portStartIndex = 20001;
+            int portEndIndex = 29999;
+
+            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
+            IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
+
+            List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
+            int unusedPort = 0;
+
+            for (int port = portStartIndex; port <= portEndIndex; port++)
+            {
+                if (!usedPorts.Contains(port))
+                {
+                    unusedPort = port;
+                    break;
+                }
+            }
+
+            return unusedPort;
 
         }
 
