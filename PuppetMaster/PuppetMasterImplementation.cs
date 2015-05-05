@@ -18,6 +18,7 @@ namespace PuppetMaster
 {
     class PuppetMasterImplementation : MarshalByRefObject, IPuppetMaster
     {
+        private String clientUri;
 
         private String mIp;
         private String url;
@@ -36,10 +37,13 @@ namespace PuppetMaster
                 }
             }
 
+            tcpPort = int.Parse(System.Environment.GetEnvironmentVariable(PuppetMaster.Program.PUPPET_MASTER_PORT, EnvironmentVariableTarget.Process));
+
+            clientUri = System.Environment.GetEnvironmentVariable(PuppetMaster.Program.CLIENT_URI, EnvironmentVariableTarget.Process);
+            
+            // Prepend the protocol and append the port
             String remoteObjectName = "PM";
 
-            // Prepend the protocol and append the port
-            tcpPort = int.Parse(System.Environment.GetEnvironmentVariable("PM_Port", EnvironmentVariableTarget.Process));
             url = "tcp://" + mIp + ":" + tcpPort + "/" + remoteObjectName;
 
         }
@@ -112,19 +116,18 @@ namespace PuppetMaster
         }
 
         public bool SubmitJob(String entryUrl, String inputFilePath, String outputDirectoryPath, String className, String classImplementationPath, int numberOfSplits) {
-            /*
-             // Start the client application
-                string clientExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Client\\bin\\Debug\\Client.vshost.exe");
 
-                // Console message
-                Console.WriteLine("Created client application to submit job request " + file + "at worker node in url " +  entryUrl + " with " + s + " splits and " + map + " dll.");
+            System.Console.WriteLine("Submitting Job to Client...");
 
-                Process.Start(clientExecutablePath, file + " " + entryUrl + " " + s + " " + map);
-             
-             
-             */
+            //Submit Job to Client
+            IClient client =  (IClient) Activator.GetObject(typeof(IClient), clientUri);
 
-            return true; }
+            client.Submit(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits);
+
+            System.Console.WriteLine("Submitted Job");
+            return true; 
+        
+        }
 
         public bool Wait(int seconds) { return true; }
 

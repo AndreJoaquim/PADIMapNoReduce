@@ -28,7 +28,6 @@ namespace Client {
 
             System.Environment.SetEnvironmentVariable("ClientTcpPort", tcpPort.ToString(), EnvironmentVariableTarget.Process);
 
-            System.Console.WriteLine("Created Client on " + clientUri.ToString() );
             System.Console.WriteLine("Press <enter> to terminate client...");
             System.Console.ReadLine();
         }

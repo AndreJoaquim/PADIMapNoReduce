@@ -121,6 +121,9 @@ namespace PADIMapNoReduce {
 
         public bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits) {
 
+            System.Console.WriteLine("[REQUEST_JOB] Broadcasting Job...");
+
+            System.Console.WriteLine("[REQUEST_JOB] Create Workers Queue");
             //Create Queue with workers
             availableWorkerToJob = new Queue<string>();
             availableWorkerToJob.Enqueue(ownUrl);
@@ -147,11 +150,17 @@ namespace PADIMapNoReduce {
                 //Test if there are workers available
                 queueWorkersSemaphore.WaitOne();
 
+                
                 //Send the job to worker
-                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), availableWorkerToJob.Dequeue());
+                String workerUrl = availableWorkerToJob.Dequeue();
+
+                System.Console.WriteLine("[REQUEST_JOB] Send work to " + workerUrl + "...");
+
+                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), workerUrl);
 
                 workerObj.RunJob(className, dllCode, beginIndex, endIndex, clientUrl, ownUrl);
 
+                System.Console.WriteLine("[REQUEST_JOB] Sent work to " + workerUrl);
             }
             
             return true;
@@ -169,10 +178,16 @@ namespace PADIMapNoReduce {
 
         public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl) {
 
+            System.Console.WriteLine("[RUN_JOB] Runnig job...");
+
+            System.Console.WriteLine("[RUN_JOB] Get input splits");
+
             // Get input split
             IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
 
             string input = clientObj.getInputSplit(0, beginIndex, endIndex);
+
+            System.Console.WriteLine("[RUN_JOB] Load assembly code");
 
             Assembly assembly = Assembly.Load(dllCode);
 
@@ -183,34 +198,51 @@ namespace PADIMapNoReduce {
 
                     if (type.FullName.EndsWith("." + className)) {
 
-                        // create an instance of the object
-                        object ClassObj = Activator.CreateInstance(type);
+                        try {
 
-                        // Dynamically Invoke the method
-                        object[] args = new object[] { input };
-                        object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
-                        IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>)resultObject;
-                       
-                        Console.WriteLine("Map call result was: ");
-                        
-                        foreach (KeyValuePair<string, string> p in result) {
-                            Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
+                            System.Console.WriteLine("[RUN_JOB] Create running instance");
+
+                            // create an instance of the object
+                            object ClassObj = Activator.CreateInstance(type);
+
+                            // Dynamically Invoke the method
+                            object[] args = new object[] { input };
+
+                            System.Console.WriteLine("[RUN_JOB] Run method");
+                            object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
+                            IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>)resultObject;
+
+                            Console.WriteLine("Map call result was: ");
+
+                            foreach (KeyValuePair<string, string> p in result) {
+                                Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
+                            }
+
+                            clientObj.sendProcessedSplit(0, result);
+
+                            IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTackerUrl);
+
+                            jobTracker.FinishProcessing(ownUrl);
+
+                            return true;
+
+                        } catch (Exception e) {
+
+                            System.Console.WriteLine("[RUN_JOB_1]Could not invoke method:");
+                            System.Console.WriteLine(e.StackTrace);
+
                         }
-
-                        clientObj.sendProcessedSplit(0, result);
-
-                        IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTackerUrl);
-
-                        jobTracker.FinishProcessing(ownUrl);
-
-                        return true;
+                       
 
                     }
 
                 }
 
             }
-            throw (new System.Exception("[RUN_JOB1]could not invoke method"));
+
+            System.Console.WriteLine("[RUN_JOB_2]Could not invoke method:");
+
+            return false;
 
         }
 

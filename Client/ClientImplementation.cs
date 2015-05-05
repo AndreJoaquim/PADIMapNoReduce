@@ -42,6 +42,7 @@ namespace Client
             // Prepend the protocol and append the port
             url = "tcp://" + url + ":" + tcpPort + "/C";
 
+            System.Console.WriteLine("Created Client at: " + url);
         }
 
         public bool Submit(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits){
@@ -84,61 +85,72 @@ namespace Client
 
         public string getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex)
         {
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Getting split for worker " + workerId + "[ " + inputBeginIndex + " , " + inputEndIndex + " ]..." );
 
-            FileStream fs = new FileStream(inputFilePath, FileMode.Open);
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Openning File...");
 
-            byte[] bytes = new byte[inputEndIndex - inputBeginIndex];
+            FileStream fs = File.Open(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
-            fs.Read(bytes, (int)inputBeginIndex, bytes.Length);
+            BufferedStream bs = new BufferedStream(fs);
 
-            string singlechar;
+            // The StreamReader to read until the next "\n"
+            // starting from the input's begin index
+            StreamReader beginStreamReader = new StreamReader(bs);
 
-            if (inputBeginIndex != 0)
-            {
-                int i = 0;
-                singlechar = Encoding.UTF8.GetString(bytes, i, 1);
-                while (!singlechar.Equals('\n'))
-                {
+            // Set the starting position of the StreamReader
+            beginStreamReader.BaseStream.Position = inputBeginIndex;
+
+            // Current character being analised
+            char[] currentChar = new char[1];
+
+            // If it's not the first block
+            // i.e. the beggining of the file
+            if (inputBeginIndex != 0) {
+
+                // Read the next character from the StreamReader's buffer
+                beginStreamReader.Read(currentChar, 0, 1);
+
+                // Search for a newline while the block size is not reached
+                while (currentChar[0] != '\n' && inputBeginIndex < inputEndIndex - 1) {
                     inputBeginIndex++;
-                    i++;
-                    singlechar = Encoding.UTF8.GetString(bytes, i, 1);
+                    beginStreamReader.Read(currentChar, 0, 1);
                 }
-                inputBeginIndex++;
 
             }
 
-            singlechar = Encoding.UTF8.GetString(bytes, bytes.Length-1, 1);
+            // It is necessary to have a new StreamReader to read
+            // from the input's end index until reaching a newline
+            StreamReader endStreamReader = new StreamReader(bs);
 
-            byte[] temp = new byte[1];
+            // Set the StreamReader's starting position
+            endStreamReader.BaseStream.Position = inputEndIndex;
 
-            byte[] temp2 = bytes;
+            // If the input's end index is not the end of the file
+            if (inputEndIndex != fs.Length) {
 
-            byte[] temp3;
-            
-            while (!singlechar.Equals('\n'))
-            {
-                fs.Read(temp, (int)inputEndIndex, 1);
-                singlechar = Encoding.UTF8.GetString(temp, temp.Length - 1, 1);
+                // Read the next character from the StreamReader's buffer
+                endStreamReader.Read(currentChar, 0, 1);
 
-                temp3 = new byte[temp2.Length + temp.Length];
-                temp2.CopyTo(temp3, 0);
-                temp.CopyTo(temp3, temp2.Length);
-
-                temp2 = temp3;
+                // Search for a newline while the end of the file is not reached
+                while (currentChar[0] != '\n' && inputEndIndex <= fs.Length) {
+                    inputEndIndex++;
+                    endStreamReader.Read(currentChar, 0, 1);
+                }
 
             }
 
-            temp3 = new byte[temp2.Length + temp.Length];
-            temp2.CopyTo(temp3, 0);
-            temp.CopyTo(temp3, temp2.Length);
+            // Buffer to keep the whole split
+            char[] splitBuffer = new char[inputEndIndex - inputBeginIndex];
 
-            temp2 = temp3;
+            // Reset the beginStreamReader to the begging of the bock
+            beginStreamReader.BaseStream.Position = inputBeginIndex;
 
-            byte[] sub = SubArray(temp2, (int)inputBeginIndex);
+            // Read the whole split from the StreamReader's buffer
+            beginStreamReader.ReadBlock(splitBuffer, 0, splitBuffer.Length);
 
-            string s = Encoding.UTF8.GetString(sub, 0, sub.Length);
-
-            return s;
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Finnish Input Split");
+            return new String(splitBuffer);
+                        
         }
 
         public bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result)
@@ -174,11 +186,5 @@ namespace Client
 
         }
 
-        public byte[] SubArray(byte[] data, int index)
-        {
-            byte[] result = new byte[data.Length-index];
-            data.CopyTo(result, index);
-            return result;
-        }
     }
 }
