@@ -24,6 +24,8 @@ namespace PuppetMaster
         private String url;
         private int tcpPort;
 
+        private HashSet<KeyValuePair<int, String>> workers;
+
         public PuppetMasterImplementation() {
 
             // Get the IP's host
@@ -46,6 +48,9 @@ namespace PuppetMaster
 
             url = "tcp://" + mIp + ":" + tcpPort + "/" + remoteObjectName;
 
+            // Initialize workers list
+            workers = new HashSet<KeyValuePair<int, String>>();
+
         }
 
         public bool CreateWorker(string id, string puppetMasterUrl, string serviceUrl)
@@ -58,12 +63,14 @@ namespace PuppetMaster
             // If the PuppetMaster is my own
             if (puppetMasterUri.Equals(url))
             {
+                // Add worker to the HashMap
+                workers.Add(new KeyValuePair<int, String>(int.Parse(id), serviceUri.ToString()));
+
                 // Start the worker process
                 string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
 
                 Process.Start(workerExecutablePath, id + " " + serviceUri.ToString());
 
-                // Console message
                 Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ".");
 
                 return true;
@@ -93,12 +100,16 @@ namespace PuppetMaster
             // If the PuppetMaster is my own
             if (puppetMasterUri.Equals(url))
             {
+
+                // Add worker to the HashMap
+                workers.Add(new KeyValuePair<int, String>(int.Parse(id), serviceUri.ToString()));
+
                 // Start the worker process
                 string workerExecutablePath = Path.Combine(Directory.GetParent(System.IO.Directory.GetCurrentDirectory()).Parent.Parent.FullName, "Worker\\bin\\Debug\\Worker.exe");
 
-                // Console message
-                Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ". Entry Level:" + entryUri.ToString() + ".");
                 Process.Start(workerExecutablePath, id + " " + serviceUri.ToString() + " " + entryUri.ToString());
+
+                Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ". Entry Level:" + entryUri.ToString() + ".");
 
                 return true;
 
@@ -117,25 +128,32 @@ namespace PuppetMaster
 
         public bool SubmitJob(String entryUrl, String inputFilePath, String outputDirectoryPath, String className, String classImplementationPath, int numberOfSplits) {
 
-            System.Console.WriteLine("Submitting Job to Client...");
+            System.Console.WriteLine("[SUBMIT_JOB] Submitting job...");
 
             //Submit Job to Client
             IClient client =  (IClient) Activator.GetObject(typeof(IClient), clientUri);
 
             client.Submit(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits);
 
-            System.Console.WriteLine("Submitted Job");
+            System.Console.WriteLine("[SUBMIT_JOB] Submitted job to client!");
             return true; 
         
         }
 
         public bool Wait(int seconds) { return true; }
 
-        public bool Status() { 
-            /*
-             this.workerList.first().PrintStatus();
-             */
-            return true; }
+        public bool Status() {
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+                
+                IWorker workerObj = (IWorker) Activator.GetObject(typeof(IWorker), worker.Value);
+
+                workerObj.PrintStatus();
+
+            }
+
+            return true;
+        }
 
         public bool SlowW(string id, int delayInSeconds) {
             /*

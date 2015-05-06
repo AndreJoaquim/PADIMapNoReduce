@@ -10,6 +10,7 @@ using System.Net.NetworkInformation;
 using System.Net;
 
 using PADIMapNoReduce;
+using System.Threading;
 
 namespace Client
 {
@@ -54,6 +55,20 @@ namespace Client
         }
 
         public bool Submit(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits){
+            
+            System.Console.WriteLine("[SUBMIT] Launching thread to submit job.");
+
+            Thread thread = new Thread(() => SubmitAsync(entryUrl, inputFilePath, outputDirectoryPath, className, classImplementationPath, numberOfSplits));
+            thread.Start();
+
+            System.Console.WriteLine("[SUBMIT] Running thread ...");
+
+            return true;
+
+        }
+
+        private void SubmitAsync(string entryUrl, string inputFilePath, string outputDirectoryPath, string className, string classImplementationPath, int numberOfSplits)
+        {
 
             this.entryUrl = entryUrl;
             this.inputFilePath = inputFilePath;
@@ -65,41 +80,41 @@ namespace Client
             jobDistribution.TotalJobs = numberOfSplits;
             jobDistribution.JobsDone = 0;
 
-            System.Console.WriteLine("[SUBMIT] Connecting to Job Tracker at " + entryUrl + ".");
+            System.Console.WriteLine("[SUBMIT_ASYNC] Connecting to Job Tracker at " + entryUrl + ".");
 
-            IWorker jobTrackerObj = (IWorker) Activator.GetObject(typeof(IWorker), entryUrl);
+            IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), entryUrl);
 
-            Console.WriteLine("[SUBMIT] Connected!");
+            Console.WriteLine("[SUBMIT_ASYNC] Connected!");
 
             // Send Class Implementation for workers
             // Get input file size
             long inputLength = new FileInfo(inputFilePath).Length;
-            Console.WriteLine("[SUBMIT] Input length: " + inputLength + ".");
+            Console.WriteLine("[SUBMIT_ASYNC] Input length: " + inputLength + ".");
 
 
             // Get DLL bytecode
             byte[] dllCode = File.ReadAllBytes(classImplementationPath);
-            Console.WriteLine("[SUBMIT] Read DLL file.");
+            Console.WriteLine("[SUBMIT_ASYNC] Read DLL file.");
 
-            try {
-                Console.WriteLine("[SUBMIT] Requesting job...");
-                jobTrackerObj.RequestJob(url, inputLength, className, dllCode, numberOfSplits);        
-                
-            } catch (SocketException e) {
-                System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERROR1:SUBMIT] Could not request job.");
-                System.Console.WriteLine(e.StackTrace);
-                return false;
+            try
+            {
+                Console.WriteLine("[SUBMIT_ASYNC] Requesting job...");
+                jobTrackerObj.RequestJob(url, inputLength, className, dllCode, numberOfSplits);
+
             }
-
-            return true;
+            catch (SocketException e)
+            {
+                System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERROR1:SUBMIT_ASYNC] Could not request job.");
+                System.Console.WriteLine(e.StackTrace);
+            }
 
         }
 
         public string getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex)
         {
-            System.Console.WriteLine("[GET_INPUT_SPLIT] Getting split for worker " + workerId + "[ " + inputBeginIndex + " , " + inputEndIndex + " ]..." );
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Getting split for worker " + workerId + ": [" + inputBeginIndex + ", " + inputEndIndex + "] ..." );
 
-            System.Console.WriteLine("[GET_INPUT_SPLIT] Openning File...");
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Opening File ...");
 
             FileStream fs = File.Open(inputFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
@@ -174,7 +189,7 @@ namespace Client
 
             // Print the split received
             foreach (KeyValuePair<string, string> pair in result)
-                Console.WriteLine("Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
+                Console.WriteLine("[SEND_PROCESSED_SPLIT] Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
 
             // Update the job result
             jobDistribution.UpdateJob(workerId, result);

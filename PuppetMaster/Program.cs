@@ -162,8 +162,15 @@ namespace PuppetMaster
                             classImplementationPath = Path.Combine(path, classImplementationPath);
 
                             // Submit job to the puppetMaster Impl
-                            puppetMaster.SubmitJob(entryUrl, file, output, className, classImplementationPath, numberOfSplits);
-
+                            
+                            try
+                            {
+                                puppetMaster.SubmitJob(entryUrl, file, output, className, classImplementationPath, numberOfSplits);
+                            }
+                            catch (Exception e) {
+                                System.Console.WriteLine(e.StackTrace);
+                                System.Console.ReadLine();
+                            }
                         }
                         else
                         {
