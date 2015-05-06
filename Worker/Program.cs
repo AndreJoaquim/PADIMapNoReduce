@@ -158,33 +158,52 @@ namespace PADIMapNoReduce {
             return true;
         }
 
-        public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl) {
+        public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl) {
 
             System.Console.WriteLine("[RUN_JOB] Running job...");
 
-            System.Console.WriteLine("[RUN_JOB] Get input splits.");
+            System.Console.WriteLine("[RUN_JOB] Starting RunAsyncJob...");
+
+            Thread thread = new Thread(() => RunAsyncJob(className, dllCode, beginIndex, endIndex, clientUrl, jobTrackerUrl));
+            thread.Start();
+
+            System.Console.WriteLine("[RUN_JOB] Started thread...");
+
+            return false;
+
+        }
+
+        public void RunAsyncJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl)
+        {
+           
+            System.Console.WriteLine("[RUN_ASYNC_JOB] Get input splits");
 
             // Get input split
             IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
 
-            System.Console.WriteLine("[RUN_JOB] Connected to client at {0}!", clientUrl);
-            
+            System.Console.WriteLine("[RUN_ASYNC_JOB] Connected to client at {0}!", clientUrl);
+
             string input = clientObj.getInputSplit(mId, beginIndex, endIndex);
 
-            System.Console.WriteLine("[RUN_JOB] Load assembly code.");
+            System.Console.WriteLine("[RUN_ASYNC_JOB] Load assembly code.");
 
             Assembly assembly = Assembly.Load(dllCode);
 
             // Walk through each type in the assembly looking for our class
-            foreach (Type type in assembly.GetTypes()) {
+            foreach (Type type in assembly.GetTypes())
+            {
+             
+                if (type.IsClass == true)
+                {
 
-                if (type.IsClass == true) {
+                    if (type.FullName.EndsWith("." + className))
+                    {
 
-                    if (type.FullName.EndsWith("." + className)) {
+                        try
+                        {
+                            Console.WriteLine("[RUN_ASYNC_JOB] type: " + type.FullName);
 
-                        try {
-
-                            System.Console.WriteLine("[RUN_JOB] Create running instance");
+                            System.Console.WriteLine("[RUN_ASYNC_JOB] Create running instance");
 
                             // create an instance of the object
                             object ClassObj = Activator.CreateInstance(type);
@@ -192,41 +211,40 @@ namespace PADIMapNoReduce {
                             // Dynamically Invoke the method
                             object[] args = new object[] { input };
 
-                            System.Console.WriteLine("[RUN_JOB] Run method");
+                            System.Console.WriteLine("[RUN_ASYNC_JOB] Run method");
                             object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
                             IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>)resultObject;
 
-                            Console.WriteLine("Map call result was: ");
+                            Console.WriteLine("[RUN_ASYNC_JOB] Map call result was: ");
 
-                            foreach (KeyValuePair<string, string> p in result) {
-                                Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
+                            foreach (KeyValuePair<string, string> p in result)
+                            {
+                                Console.WriteLine("--- key: " + p.Key + "; value: " + p.Value);
                             }
 
+                            // Send processed split to the client with my Id and the Result
                             clientObj.sendProcessedSplit(mId, result);
+                            Console.WriteLine("[RUN_ASYNC_TASK] Sent processed split");
 
-                            IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTackerUrl);
+                            IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUrl);
 
                             jobTracker.FinishProcessing(ownUrl);
 
-                            return true;
+                        }
+                        catch (Exception e)
+                        {
 
-                        } catch (Exception e) {
-
-                            System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_JOB] Could not invoke method:");
+                            System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_ASYNC_JOB] Could not invoke method.");
                             System.Console.WriteLine(e.StackTrace);
 
                         }
-                       
+
 
                     }
 
                 }
 
             }
-
-            System.Console.WriteLine("[RUN_JOB_2]Could not invoke method:");
-
-            return false;
 
         }
 
