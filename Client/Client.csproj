@@ -43,6 +43,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientImplementation.cs" />
+    <Compile Include="JobDistribution.cs" />
     <Compile Include="Program.cs" />
   </ItemGroup>
   <ItemGroup>

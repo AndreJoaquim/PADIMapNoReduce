@@ -2,13 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using PADIMapNoReduce;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Runtime.Remoting.Channels;
 using System.IO;
 using System.Net.Sockets;
 using System.Net.NetworkInformation;
 using System.Net;
+
+using PADIMapNoReduce;
 
 namespace Client
 {
@@ -23,7 +24,14 @@ namespace Client
         private string classImplementationPath;
         private int numberOfSplits;
 
+        // This keeps the record of the jobs
+        // already done and being done
+        private JobDistribution jobDistribution;
+
         public ClientImplementation(){
+
+            // Initialize the Job Distribution structure
+            jobDistribution = new JobDistribution();
 
             // Get the IP's host
             IPHostEntry host;
@@ -74,8 +82,9 @@ namespace Client
                 Console.WriteLine("[SUBMIT] Requesting job...");
                 jobTrackerObj.RequestJob(url, inputLength, className, dllCode, numberOfSplits);        
                 
-            } catch (SocketException) {
-                System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERR1] Could not request job.");
+            } catch (SocketException e) {
+                System.Console.WriteLine("[CLIENT_IMPLEMENTATION_ERROR1:SUBMIT] Could not request job.");
+                System.Console.WriteLine(e.StackTrace);
                 return false;
             }
 
@@ -148,42 +157,21 @@ namespace Client
             // Read the whole split from the StreamReader's buffer
             beginStreamReader.ReadBlock(splitBuffer, 0, splitBuffer.Length);
 
-            System.Console.WriteLine("[GET_INPUT_SPLIT] Finnish Input Split");
+            // Save the job distributed on our JobDistribution class
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Keeping track of the job...");
+            jobDistribution.AddJob(workerId, inputBeginIndex, inputEndIndex);
+
+            System.Console.WriteLine("[GET_INPUT_SPLIT] Finished Input Split");
             return new String(splitBuffer);
                         
         }
 
-        public bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result)
+        public bool sendProcessedSplit(int workerId, IList<KeyValuePair<string, string>> result)
         {
-            return false;
-        }
-
-        /* 
-         * Utility functions
-         */
-        private int NextFreeTcpPort()
-        {
-
-            int portStartIndex = 10001;
-            int portEndIndex = 19999;
-
-            IPGlobalProperties properties = IPGlobalProperties.GetIPGlobalProperties();
-            IPEndPoint[] tcpPoints = properties.GetActiveTcpListeners();
-
-            List<int> usedPorts = tcpPoints.Select(p => p.Port).ToList<int>();
-            int unusedPort = 0;
-
-            for (int port = portStartIndex; port <= portEndIndex; port++)
-            {
-                if (!usedPorts.Contains(port))
-                {
-                    unusedPort = port;
-                    break;
-                }
-            }
-
-            return unusedPort;
-
+            // Update the job result
+            jobDistribution.UpdateJob(workerId, result);
+            
+            return true;
         }
 
     }

@@ -178,16 +178,18 @@ namespace PADIMapNoReduce {
 
         public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl) {
 
-            System.Console.WriteLine("[RUN_JOB] Runnig job...");
+            System.Console.WriteLine("[RUN_JOB] Running job...");
 
-            System.Console.WriteLine("[RUN_JOB] Get input splits");
+            System.Console.WriteLine("[RUN_JOB] Get input splits.");
 
             // Get input split
             IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
 
+            System.Console.WriteLine("[RUN_JOB] Connected to client at {0}!", clientUrl);
+            
             string input = clientObj.getInputSplit(0, beginIndex, endIndex);
 
-            System.Console.WriteLine("[RUN_JOB] Load assembly code");
+            System.Console.WriteLine("[RUN_JOB] Load assembly code.");
 
             Assembly assembly = Assembly.Load(dllCode);
 

@@ -141,16 +141,25 @@ namespace PuppetMaster
                             string entryUrl = split[1];
                             string file = split[2];
                             string output = split[3];
-                            string className = split[4];
-                            string classImplementationPath = split[5];
-                            int numberOfSplits = int.Parse(split[6]);
+                            int numberOfSplits = int.Parse(split[4]);
+                            string className = split[5];
+                            string classImplementationPath = split[6];
 
                             // Probably not the best approach...
-                            // Our test files and output directory are in the Puppet Master .exe's directory
-                            string path = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + @"\files\";
-                            file = path + file;
-                            output = path + output;
-                            classImplementationPath = path + classImplementationPath;
+                            // Our test files and output directory are in the Puppet Master .exe's directory inside folder "files"
+                            string path = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+
+                            file = Path.Combine(path, file);
+                            output = Path.Combine(path, output);
+
+                            // Create the directory if it doesn't exist
+                            if (!Directory.Exists(output))
+                            {
+                                Directory.CreateDirectory(output);
+                                Console.WriteLine("[SUBMIT] Created output directory at {0}", output);
+                            }
+
+                            classImplementationPath = Path.Combine(path, classImplementationPath);
 
                             // Submit job to the puppetMaster Impl
                             puppetMaster.SubmitJob(entryUrl, file, output, className, classImplementationPath, numberOfSplits);
@@ -159,7 +168,7 @@ namespace PuppetMaster
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP>");
+                            Console.WriteLine("Wrong usage. Usage: SUBMIT <ENTRY-URL> <FILE> <OUTPUT> <S> <MAP> <DLL>");
                         }
 
                         break;
