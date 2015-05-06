@@ -171,9 +171,30 @@ namespace Client
 
         public bool sendProcessedSplit(int workerId, IList<KeyValuePair<string, string>> result)
         {
+
+            // Print the split received
+            foreach (KeyValuePair<string, string> pair in result)
+                Console.WriteLine("Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
+
             // Update the job result
             jobDistribution.UpdateJob(workerId, result);
+
+            // Check if the whole job is done
+            if (numberOfSplits == jobDistribution.JobsDone)
+                finishJob();
+
+            return true;
+        }
+
+        public bool finishJob() {
+
+            // Retrieve all jobs from the Job Distribution
+
+            // Export result to file
             
+            // Inform the User Application of the final result if it exists
+
+            Console.WriteLine("[FINISH_JOB] Finished job!");
             return true;
         }
 

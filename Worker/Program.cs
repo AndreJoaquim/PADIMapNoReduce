@@ -22,6 +22,8 @@ namespace PADIMapNoReduce {
 
             int tcpPort = serviceUri.Port;
 
+            int id = int.Parse(args[0]);
+
             String[] segments = args[1].Split('/');
             String remoteObjectName = segments[segments.Length - 1];
 
@@ -31,79 +33,53 @@ namespace PADIMapNoReduce {
             ChannelServices.RegisterChannel(channel, true);
             RemotingConfiguration.RegisterWellKnownServiceType(typeof(WorkerServices), remoteObjectName, WellKnownObjectMode.Singleton);
 
-            //Register new worker in itself
-            try{
+            try {
 
-                IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), serviceUri.ToString());
+                IWorker newWorkerObj = (IWorker) Activator.GetObject(typeof(IWorker), serviceUri.ToString());
 
-                newWorkerObj.RegisterOwnWorker(serviceUri.ToString());
+                // Register new worker in itself passing the ID and the URI
+                newWorkerObj.RegisterOwnWorker(id, serviceUri.ToString());
 
-            }catch(SocketException e){
+            } catch(SocketException e){
 
-                System.Console.WriteLine("[WORKER_MAIN_1]Could not locate server");
+                System.Console.WriteLine("[WORKER_ERROR1:MAIN] Could not locate server");
                 System.Console.WriteLine(e.StackTrace);
                 
-            }catch(Exception e){
+            } catch(Exception e){
 
-                System.Console.WriteLine("[WORKER_MAIN_2]Could not locate server");
+                System.Console.WriteLine("[WORKER_ERROR2:MAIN] Could not locate server");
                 System.Console.WriteLine(e.StackTrace);
             }
 
-            //If outer jobtracker exists
+            // If outer jobtracker exists
             if (args.Length >= 3) {
 
-                try{
+                try {
 
                     String jobTrackerUri = args[2];
-
-                    IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUri);
-
-                    //Broadcast to the network the new worker
+                    IWorker jobTrackerObj = (IWorker) Activator.GetObject(typeof(IWorker), jobTrackerUri);
+                    // Broadcast to the network the new worker
                     jobTrackerObj.BroadcastNewWorker(serviceUri.ToString());
 
-                }catch(SocketException e){
+                } catch(SocketException e){
 
-                    System.Console.WriteLine("[WORKER_MAIN_3]Could not locate server");
+                    System.Console.WriteLine("[WORKER_ERROR3:MAIN] Could not locate server");
                     System.Console.WriteLine(e.StackTrace);
                 
-                }catch(Exception e){
+                } catch(Exception e){
 
-                    System.Console.WriteLine("[WORKER_MAIN_4]Could not locate server");
+                    System.Console.WriteLine("WORKER_ERROR4:MAIN] Could not locate server");
                     System.Console.WriteLine(e.StackTrace);
                 
                 }
             }
 
-
-            try
-            {
-
-                IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), serviceUri.ToString());
-
-                newWorkerObj.PrintStatus();
-
-            }
-            catch (SocketException e)
-            {
-
-                System.Console.WriteLine("[WORKER_MAIN_1]Could not locate server");
-                System.Console.WriteLine(e.StackTrace);
-
-            }
-            catch (Exception e)
-            {
-
-                System.Console.WriteLine("[WORKER_MAIN_2]Could not locate server");
-                System.Console.WriteLine(e.StackTrace);
-            }
-
-
             System.Console.WriteLine("Press <enter> to terminate server...");
             System.Console.ReadLine();
 
         }
-    }
 
+    }
 
     internal class WorkerServices : MarshalByRefObject, IWorker {
 
@@ -113,18 +89,21 @@ namespace PADIMapNoReduce {
         private Queue<string> availableWorkerToJob;
         private Semaphore queueWorkersSemaphore;
 
+        private int mId;
+
         public WorkerServices(){
 
             workersUrl = new List<string>();
-        }
 
+        }
 
         public bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits) {
 
             System.Console.WriteLine("[REQUEST_JOB] Broadcasting Job...");
 
             System.Console.WriteLine("[REQUEST_JOB] Create Workers Queue");
-            //Create Queue with workers
+
+            // Create Queue with workers
             availableWorkerToJob = new Queue<string>();
             availableWorkerToJob.Enqueue(ownUrl);
 
@@ -133,23 +112,26 @@ namespace PADIMapNoReduce {
                 
             //Split the inputFile between the works
             long splitSize = inputSize / NumberOfSplits;
+            long remainder = inputSize % NumberOfSplits;
 
             queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
+
 
             //Broadcast the job between the whole workers
             for (long i = 0; i < inputSize; i += splitSize) {
 
                 long beginIndex = i;
-                long endIndex = i + splitSize - 1;
-
+                long endIndex = beginIndex + splitSize - 1;
+                
                 //Is last split?
-                if (inputSize - i < splitSize){
-                    endIndex = inputSize; 
+                if (beginIndex + splitSize + remainder >= inputSize)
+                {
+                    endIndex += remainder + 1;
+                    i += remainder + 1;
                 }
 
                 //Test if there are workers available
                 queueWorkersSemaphore.WaitOne();
-
                 
                 //Send the job to worker
                 String workerUrl = availableWorkerToJob.Dequeue();
@@ -187,7 +169,7 @@ namespace PADIMapNoReduce {
 
             System.Console.WriteLine("[RUN_JOB] Connected to client at {0}!", clientUrl);
             
-            string input = clientObj.getInputSplit(0, beginIndex, endIndex);
+            string input = clientObj.getInputSplit(mId, beginIndex, endIndex);
 
             System.Console.WriteLine("[RUN_JOB] Load assembly code.");
 
@@ -220,7 +202,7 @@ namespace PADIMapNoReduce {
                                 Console.WriteLine("key: " + p.Key + ", value: " + p.Value);
                             }
 
-                            clientObj.sendProcessedSplit(0, result);
+                            clientObj.sendProcessedSplit(mId, result);
 
                             IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTackerUrl);
 
@@ -230,7 +212,7 @@ namespace PADIMapNoReduce {
 
                         } catch (Exception e) {
 
-                            System.Console.WriteLine("[RUN_JOB_1]Could not invoke method:");
+                            System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_JOB] Could not invoke method:");
                             System.Console.WriteLine(e.StackTrace);
 
                         }
@@ -248,10 +230,10 @@ namespace PADIMapNoReduce {
 
         }
 
-
-        public bool RegisterOwnWorker(string url) {
+        public bool RegisterOwnWorker(int id, string url) {
 
             ownUrl = url;
+            mId = id;
 
             return true;
         }

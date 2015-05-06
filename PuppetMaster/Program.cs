@@ -86,13 +86,13 @@ namespace PuppetMaster
 
                         // Create WORKER 1
                         puppetMaster.CreateWorker("1", "tcp://localhost:20001/PM", "tcp://localhost:30001/W");
-                        Thread.Sleep(4000);
+                        Thread.Sleep(3000);
                         // Create WORKER 2
                         puppetMaster.CreateWorker("2", "tcp://localhost:20001/PM", "tcp://localhost:30002/W", "tcp://localhost:30001/W");
-                        Thread.Sleep(4000);
+                        Thread.Sleep(3000);
                         // Create WORKER 3
                         puppetMaster.CreateWorker("3", "tcp://localhost:20001/PM", "tcp://localhost:30003/W", "tcp://localhost:30002/W");
-                        Thread.Sleep(4000);
+                        Thread.Sleep(3000);
                         // Create WORKER 4
                         puppetMaster.CreateWorker("4", "tcp://localhost:20001/PM", "tcp://localhost:30004/W", "tcp://localhost:30002/W");
 

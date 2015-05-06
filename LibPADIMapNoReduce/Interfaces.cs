@@ -4,12 +4,13 @@ using System.Collections.Generic;
 
 namespace PADIMapNoReduce {
     public interface IMapper {
+
         IList<KeyValuePair<string, string>> Map(string fileLine);
     }
 
     public interface IWorker {
 
-        //Job Tracker Methods
+        // Job Tracker Methods
         bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits);
 
         bool FinishProcessing(string workerUrl);
@@ -17,7 +18,7 @@ namespace PADIMapNoReduce {
         //Worker Methods
         bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl);
 
-        bool RegisterOwnWorker(string url);
+        bool RegisterOwnWorker(int id, string url);
 
         bool BroadcastNewWorker(string url);
 
@@ -33,9 +34,10 @@ namespace PADIMapNoReduce {
 
         String getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex);
 
-        bool sendProcessedSplit(int workerID, IList<KeyValuePair<string, string>> result);
+        bool sendProcessedSplit(int workerId, IList<KeyValuePair<string, string>> result);
+
+        bool finishJob();
         
- 
     }
 
     public interface IPuppetMaster {

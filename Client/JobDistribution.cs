@@ -65,6 +65,7 @@ namespace Client
                 if (job.WorkerId == workerId && !job.IsDone) {
                     job.Result = result;
                     job.IsDone = true;
+                    JobsDone++;
                 }
             }
 
