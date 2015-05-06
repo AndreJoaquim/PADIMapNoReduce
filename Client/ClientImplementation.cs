@@ -30,9 +30,6 @@ namespace Client
 
         public ClientImplementation(){
 
-            // Initialize the Job Distribution structure
-            jobDistribution = new JobDistribution();
-
             // Get the IP's host
             IPHostEntry host;
             host = Dns.GetHostEntry(Dns.GetHostName());
@@ -50,6 +47,9 @@ namespace Client
             // Prepend the protocol and append the port
             url = "tcp://" + url + ":" + tcpPort + "/C";
 
+            // Initialize the Job Distribution structure
+            jobDistribution = new JobDistribution();
+
             System.Console.WriteLine("Created Client at: " + url);
         }
 
@@ -61,6 +61,9 @@ namespace Client
             this.className = className;
             this.classImplementationPath = classImplementationPath;
             this.numberOfSplits = numberOfSplits;
+
+            jobDistribution.TotalJobs = numberOfSplits;
+            jobDistribution.JobsDone = 0;
 
             System.Console.WriteLine("[SUBMIT] Connecting to Job Tracker at " + entryUrl + ".");
 
