@@ -25,6 +25,16 @@ namespace PADIMapNoReduce {
         bool RegisterNewWorkers(List<string> workerServiceUrl);
 
         bool PrintStatus();
+
+        bool SlowWorker(int delay);
+
+        bool FreezeW();
+
+        bool UnfreezeW();
+        
+        bool FreezeC();
+        
+        bool UnfreezeC();
     }
 
 

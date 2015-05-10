@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.Remoting;
@@ -35,17 +36,17 @@ namespace PADIMapNoReduce {
 
             try {
 
-                IWorker newWorkerObj = (IWorker) Activator.GetObject(typeof(IWorker), serviceUri.ToString());
+                IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), serviceUri.ToString());
 
                 // Register new worker in itself passing the ID and the URI
                 newWorkerObj.RegisterOwnWorker(id, serviceUri.ToString());
 
-            } catch(SocketException e){
+            } catch (SocketException e) {
 
                 System.Console.WriteLine("[WORKER_ERROR1:MAIN] Could not locate server");
                 System.Console.WriteLine(e.StackTrace);
-                
-            } catch(Exception e){
+
+            } catch (Exception e) {
 
                 System.Console.WriteLine("[WORKER_ERROR2:MAIN] Could not locate server");
                 System.Console.WriteLine(e.StackTrace);
@@ -57,20 +58,20 @@ namespace PADIMapNoReduce {
                 try {
 
                     String jobTrackerUri = args[2];
-                    IWorker jobTrackerObj = (IWorker) Activator.GetObject(typeof(IWorker), jobTrackerUri);
+                    IWorker jobTrackerObj = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUri);
                     // Broadcast to the network the new worker
                     jobTrackerObj.BroadcastNewWorker(serviceUri.ToString());
 
-                } catch(SocketException e){
+                } catch (SocketException e) {
 
                     System.Console.WriteLine("[WORKER_ERROR3:MAIN] Could not locate server");
                     System.Console.WriteLine(e.StackTrace);
-                
-                } catch(Exception e){
+
+                } catch (Exception e) {
 
                     System.Console.WriteLine("WORKER_ERROR4:MAIN] Could not locate server");
                     System.Console.WriteLine(e.StackTrace);
-                
+
                 }
             }
 
@@ -83,17 +84,34 @@ namespace PADIMapNoReduce {
 
     internal class WorkerServices : MarshalByRefObject, IWorker {
 
+        private enum Status { GettingInput, FetchingInput, Computing, SendingOutput, Idle };
+
+        private Status myStatus;
+
         private string ownUrl;
         private List<string> workersUrl;
 
         private Queue<string> availableWorkerToJob;
         private Semaphore queueWorkersSemaphore;
 
+        //Slow thread Variables (in seconds)
+        private int threadDelay;
+        private Mutex delayMutex = new Mutex();
+
+        //FreezeW Variables
+        private Object frozenWLock = new Object();
+        private bool isFrozenW = false;
+
+        //FreezeC Variables
+        private Mutex frozenCMutex = new Mutex();
+
         private int mId;
 
-        public WorkerServices(){
+        public WorkerServices() {
 
             workersUrl = new List<string>();
+
+            myStatus = Status.Idle;
 
         }
 
@@ -103,53 +121,66 @@ namespace PADIMapNoReduce {
 
             System.Console.WriteLine("[REQUEST_JOB] Create Workers Queue");
 
-            // Create Queue with workers
-            availableWorkerToJob = new Queue<string>();
-            availableWorkerToJob.Enqueue(ownUrl);
+            try {
 
-            foreach(string worker in workersUrl)
-                availableWorkerToJob.Enqueue(worker);
-                
-            //Split the inputFile between the works
-            long splitSize = inputSize / NumberOfSplits;
-            long remainder = inputSize % NumberOfSplits;
+                // Create Queue with workers
+                availableWorkerToJob = new Queue<string>();
+                availableWorkerToJob.Enqueue(ownUrl);
 
-            queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
+                foreach (string worker in workersUrl)
+                    availableWorkerToJob.Enqueue(worker);
+
+                //Split the inputFile between the works
+                long splitSize = inputSize / NumberOfSplits;
+                long remainder = inputSize % NumberOfSplits;
+
+                queueWorkersSemaphore = new Semaphore(workersUrl.Count + 1, workersUrl.Count + 1);
 
 
-            //Broadcast the job between the whole workers
-            for (long i = 0; i < inputSize; i += splitSize) {
+                //Broadcast the job between the whole workers
+                for (long i = 0; i < inputSize; i += splitSize) {
 
-                long beginIndex = i;
-                long endIndex = beginIndex + splitSize - 1;
-                
-                //Is last split?
-                if (beginIndex + splitSize + remainder >= inputSize)
-                {
-                    endIndex += remainder + 1;
-                    i += remainder + 1;
+                    long beginIndex = i;
+                    long endIndex = beginIndex + splitSize - 1;
+
+                    //Is last split?
+                    if (beginIndex + splitSize + remainder >= inputSize) {
+                        endIndex += remainder + 1;
+                        i += remainder + 1;
+                    }
+
+
+                    Console.WriteLine(">>>>" + availableWorkerToJob.Count);
+                    //Test if there are workers available
+                    queueWorkersSemaphore.WaitOne();
+
+                    //Send the job to worker
+                    String workerUrl = availableWorkerToJob.Dequeue();
+
+                    System.Console.WriteLine("[REQUEST_JOB] Send work to " + workerUrl + "...");
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), workerUrl);
+
+                    workerObj.RunJob(className, dllCode, beginIndex, endIndex, clientUrl, ownUrl);
+
+                    System.Console.WriteLine("[REQUEST_JOB] Sent work to " + workerUrl);
                 }
 
-                //Test if there are workers available
-                queueWorkersSemaphore.WaitOne();
-                
-                //Send the job to worker
-                String workerUrl = availableWorkerToJob.Dequeue();
 
-                System.Console.WriteLine("[REQUEST_JOB] Send work to " + workerUrl + "...");
 
-                IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), workerUrl);
+            } catch (Exception e) {
 
-                workerObj.RunJob(className, dllCode, beginIndex, endIndex, clientUrl, ownUrl);
-
-                System.Console.WriteLine("[REQUEST_JOB] Sent work to " + workerUrl);
+                Console.WriteLine(e.StackTrace);
             }
-            
+
             return true;
-        
+
+
         }
 
         public bool FinishProcessing(string workerUrl) {
+
+            System.Console.WriteLine("[FINISH_PROCESSING] Add worker to queue...");
 
             availableWorkerToJob.Enqueue(workerUrl);
 
@@ -173,34 +204,36 @@ namespace PADIMapNoReduce {
 
         }
 
-        public void RunAsyncJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl)
-        {
-           
+        public void RunAsyncJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl) {
+
             System.Console.WriteLine("[RUN_ASYNC_JOB] Get input splits");
 
             // Get input split
+            myStatus = Status.GettingInput;
+
             IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
 
             System.Console.WriteLine("[RUN_ASYNC_JOB] Connected to client at {0}!", clientUrl);
 
+            //FREEZEW - Not Able to Communicate with outside
+            TestFrozenW();
             string input = clientObj.getInputSplit(mId, beginIndex, endIndex);
 
+
             System.Console.WriteLine("[RUN_ASYNC_JOB] Load assembly code.");
+
+            myStatus = Status.FetchingInput;
 
             Assembly assembly = Assembly.Load(dllCode);
 
             // Walk through each type in the assembly looking for our class
-            foreach (Type type in assembly.GetTypes())
-            {
-             
-                if (type.IsClass == true)
-                {
+            foreach (Type type in assembly.GetTypes()) {
 
-                    if (type.FullName.EndsWith("." + className))
-                    {
+                if (type.IsClass == true) {
 
-                        try
-                        {
+                    if (type.FullName.EndsWith("." + className)) {
+
+                        try {
                             Console.WriteLine("[RUN_ASYNC_JOB] type: " + type.FullName);
 
                             System.Console.WriteLine("[RUN_ASYNC_JOB] Create running instance");
@@ -208,35 +241,68 @@ namespace PADIMapNoReduce {
                             // create an instance of the object
                             object ClassObj = Activator.CreateInstance(type);
 
-                            // Dynamically Invoke the method
-                            object[] args = new object[] { input };
+                            //Result List
+                            IList<KeyValuePair<string, string>> result = new List<KeyValuePair<string, string>>();
 
-                            System.Console.WriteLine("[RUN_ASYNC_JOB] Run method");
-                            object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
-                            IList<KeyValuePair<string, string>> result = (IList<KeyValuePair<string, string>>)resultObject;
+                            using (StringReader sr = new StringReader(input)) {
 
-                            Console.WriteLine("[RUN_ASYNC_JOB] Map call result was: ");
+                                String inputLine;
 
-                            foreach (KeyValuePair<string, string> p in result)
-                            {
-                                Console.WriteLine("--- key: " + p.Key + "; value: " + p.Value);
+                                while ((inputLine = sr.ReadLine()) != null) {
+
+                                    delayMutex.WaitOne();
+
+                                    if (this.threadDelay > 0) {
+                                        Thread.Sleep(this.threadDelay * 1000);
+                                        this.threadDelay = 0;
+                                    }
+
+                                    delayMutex.ReleaseMutex();
+
+                                    // Dynamically Invoke the method
+                                    object[] args = new object[] { inputLine };
+
+                                    //FREEZEW - Not Able to Compute
+                                    TestFrozenW();
+                                    object resultObject = type.InvokeMember("Map", BindingFlags.Default | BindingFlags.InvokeMethod, null, ClassObj, args);
+                                    
+
+                                    foreach (KeyValuePair<string, string> resultPair in (IList<KeyValuePair<string, string>>)resultObject) {
+                                        result.Add(resultPair);
+                                    }
+
+                                }
+
                             }
 
+                            myStatus = Status.SendingOutput;
+
                             // Send processed split to the client with my Id and the Result
+
+                            //FREEZEW - Not Able to Communicate with outside
+                            TestFrozenW();
                             clientObj.sendProcessedSplit(mId, result);
+
+
                             Console.WriteLine("[RUN_ASYNC_TASK] Sent processed split");
 
                             IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUrl);
 
+                            //FREEZEW - Not Able to Communicate with outside
+                            TestFrozenW();
                             jobTracker.FinishProcessing(ownUrl);
 
-                        }
-                        catch (Exception e)
-                        {
+                            myStatus = Status.Idle;
+
+                        } catch (Exception e) {
 
                             System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_ASYNC_JOB] Could not invoke method.");
+                            System.Console.WriteLine("=========================");
                             System.Console.WriteLine(e.StackTrace);
-
+                            System.Console.WriteLine("=========================");
+                            System.Console.WriteLine(e.GetType());
+                            System.Console.WriteLine("=========================");
+                            System.Console.WriteLine(e.Message);
                         }
 
 
@@ -264,7 +330,7 @@ namespace PADIMapNoReduce {
             //Send to for each element of workerUrl the new worker Url
             foreach (string worker in workersUrl) {
 
-                if(!worker.Equals(url)){
+                if (!worker.Equals(url)) {
 
                     IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker);
 
@@ -275,12 +341,12 @@ namespace PADIMapNoReduce {
                         //Send to an already existing worker the new one
                         workerObj.RegisterNewWorkers(workers);
 
-                    } catch (SocketException){
+                    } catch (SocketException) {
 
                         System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR1] Could not locate server");
                         return false;
 
-                    } catch (Exception e){
+                    } catch (Exception e) {
 
                         System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR2] " + e.StackTrace);
                         return false;
@@ -291,7 +357,7 @@ namespace PADIMapNoReduce {
             }
 
             //Send to the new worker a complete list of the workers urls
-            IWorker newWorkerObj = (IWorker) Activator.GetObject(typeof(IWorker), url);
+            IWorker newWorkerObj = (IWorker)Activator.GetObject(typeof(IWorker), url);
 
             try {
                 //Create list with the new worker url
@@ -302,21 +368,17 @@ namespace PADIMapNoReduce {
                 //Send to an already existing worker the new one
                 newWorkerObj.RegisterNewWorkers(workers);
 
-            }
-            catch (SocketException)
-            {
+            } catch (SocketException) {
 
                 System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR3] Could not locate server");
                 return false;
 
-            }
-            catch (Exception e)
-            {
+            } catch (Exception e) {
 
                 System.Console.WriteLine("[BROADCAST_NEW_WORKER_ERR4]" + e.StackTrace);
                 return false;
             }
-            
+
             return true;
         }
 
@@ -334,10 +396,65 @@ namespace PADIMapNoReduce {
 
             Console.WriteLine("Connections: ");
 
-            foreach (string worker in workersUrl)
-            {
+            foreach (string worker in workersUrl) {
                 Console.WriteLine(worker);
             }
+
+            Console.WriteLine("Current task:");
+            Console.WriteLine(myStatus);
+            return true;
+        }
+
+        public bool SlowWorker(int delay) {
+
+            delayMutex.WaitOne();
+            threadDelay += delay;
+            delayMutex.ReleaseMutex();
+
+            return true;
+
+        }
+
+        //====================================
+        // FREEZENW related methods 
+
+        public bool FreezeW() {
+
+            lock (frozenWLock) {
+                isFrozenW = true;
+            }
+
+            return true;
+            
+        }
+
+        public bool UnfreezeW() {
+
+            lock (frozenWLock) {
+                isFrozenW = false;
+                Monitor.PulseAll(frozenWLock);
+            }
+            return true;
+        }
+
+        private void TestFrozenW() {
+
+            lock (frozenWLock) {
+                while (isFrozenW)
+                    Monitor.Wait(frozenWLock);
+            }
+
+        }
+        public bool FreezeC(){
+
+            frozenCMutex.WaitOne();
+
+            return true;
+        }   
+
+        public bool UnfreezeC() {
+
+            frozenCMutex.ReleaseMutex();
 
             return true;
         }

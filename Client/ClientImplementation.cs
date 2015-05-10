@@ -16,6 +16,7 @@ namespace Client
 {
     class ClientImplementation : MarshalByRefObject, IClient {
 
+        
         private String url;
 
         private string entryUrl;
@@ -28,6 +29,7 @@ namespace Client
         // This keeps the record of the jobs
         // already done and being done
         private JobDistribution jobDistribution;
+        private Mutex jobDistributionMutex = new Mutex();
 
         public ClientImplementation(){
 
@@ -77,8 +79,10 @@ namespace Client
             this.classImplementationPath = classImplementationPath;
             this.numberOfSplits = numberOfSplits;
 
+            jobDistributionMutex.WaitOne();
             jobDistribution.TotalJobs = numberOfSplits;
             jobDistribution.JobsDone = 0;
+            jobDistributionMutex.ReleaseMutex();
 
             System.Console.WriteLine("[SUBMIT_ASYNC] Connecting to Job Tracker at " + entryUrl + ".");
 
@@ -175,9 +179,11 @@ namespace Client
             // Read the whole split from the StreamReader's buffer
             beginStreamReader.ReadBlock(splitBuffer, 0, splitBuffer.Length);
 
+            jobDistributionMutex.WaitOne();
             // Save the job distributed on our JobDistribution class
             System.Console.WriteLine("[GET_INPUT_SPLIT] Keeping track of the job...");
             jobDistribution.AddJob(workerId, inputBeginIndex, inputEndIndex);
+            jobDistributionMutex.ReleaseMutex();
 
             System.Console.WriteLine("[GET_INPUT_SPLIT] Finished Input Split");
             return new String(splitBuffer);
@@ -188,9 +194,10 @@ namespace Client
         {
 
             // Print the split received
-            foreach (KeyValuePair<string, string> pair in result)
-                Console.WriteLine("[SEND_PROCESSED_SPLIT] Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
+            //foreach (KeyValuePair<string, string> pair in result)
+            //    Console.WriteLine("[SEND_PROCESSED_SPLIT] Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
 
+            jobDistributionMutex.WaitOne();
             // Update the job result
             jobDistribution.UpdateJob(workerId, result);
 
@@ -198,16 +205,32 @@ namespace Client
             if (numberOfSplits == jobDistribution.JobsDone)
                 finishJob();
 
+            jobDistributionMutex.ReleaseMutex();
             return true;
         }
 
         public bool finishJob() {
 
-            // Retrieve all jobs from the Job Distribution
+            StreamWriter fileOutputStream;
+            int i=1;
+
+            Console.WriteLine("[FINISH_JOB] Saving results to file");
 
             // Export result to file
-            
-            // Inform the User Application of the final result if it exists
+            foreach(JobDistribution.Job job in jobDistribution.GetJobs()){
+
+                Console.WriteLine("[FINISH_JOB] Saving split " + i + " to file...");
+
+                fileOutputStream = new StreamWriter(outputDirectoryPath + "\\" + i + ".out");
+                
+                foreach(KeyValuePair<string, string> pair in job.Result){
+                    fileOutputStream.WriteLine( pair.Key + "=>" + pair.Value);
+                }
+
+
+                fileOutputStream.Close();
+                i++;
+            }
 
             Console.WriteLine("[FINISH_JOB] Finished job!");
             return true;

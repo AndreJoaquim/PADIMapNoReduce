@@ -140,7 +140,7 @@ namespace PuppetMaster
         
         }
 
-        public bool Wait(int seconds) { return true; }
+        public bool Wait(int seconds) { System.Threading.Thread.Sleep(seconds * 1000); return true; }
 
         public bool Status() {
 
@@ -156,36 +156,83 @@ namespace PuppetMaster
         }
 
         public bool SlowW(string id, int delayInSeconds) {
-            /*
-            this.workerList.first().SlowWorker(id, delayInSeconds);
-            */
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+
+                if (worker.Key == int.Parse(id)) {
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker.Value);
+
+                    workerObj.SlowWorker(delayInSeconds);
+                }
+                
+            }
+
             return true;
+
         }
 
         public bool FrezeeW(string id) {
-            /*
-            this.workerList.first().FreezeWorker(id);
-            */
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+
+                if (worker.Key == int.Parse(id)) {
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker.Value);
+
+                    workerObj.FreezeW();
+                }
+
+            }
+
             return true; }
 
         public bool UnfreezeW(string id) {
-            /*
-            this.workerList.first().UnFreezeWorker(id);
-            */
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+
+                if (worker.Key == int.Parse(id)) {
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker.Value);
+
+                    workerObj.UnfreezeW();
+
+                }
+
+            }
+
             return true;
         }
 
         public bool FreezeC(string id){
-            /*
-            this.workerList.first().FreezeWorkerComunication(id);
-            */
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+
+                if (worker.Key == int.Parse(id)) {
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker.Value);
+
+                    workerObj.FreezeC();
+                }
+
+            }
+
             return true;
         }
 
         public bool UnfreezeC(string id) {
-            /*
-            this.workerList.first().UnFreezeWorkerComunication(id);
-            */
+
+            foreach (KeyValuePair<int, string> worker in workers) {
+
+                if (worker.Key == int.Parse(id)) {
+
+                    IWorker workerObj = (IWorker)Activator.GetObject(typeof(IWorker), worker.Value);
+
+                    workerObj.UnfreezeC();
+                }
+
+            }
+
             return true;
         }
 

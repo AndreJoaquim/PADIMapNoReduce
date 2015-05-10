@@ -237,10 +237,10 @@ namespace PuppetMaster
                     case FREEZEW:
 
                         /*
-                          * SLOWW <ID> <delay-in-seconds>
+                          * FREEZEW <ID>
                           */
 
-                        if (split.Length == 3)
+                        if (split.Length == 2)
                         {
 
                             string id = split[1];
@@ -251,7 +251,7 @@ namespace PuppetMaster
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                            Console.WriteLine("Wrong usage. Usage: FREEZEW <ID>");
                         }
 
                         break;
@@ -259,22 +259,21 @@ namespace PuppetMaster
                     case UNFREEZEW:
 
                         /*
-                          * SLOWW <ID> <delay-in-seconds>
+                          * UNFREEZEW <ID>
                           */
 
-                        if (split.Length == 3)
+                        if (split.Length == 2)
                         {
 
                             string id = split[1];
-                            int delayInSeconds = Int32.Parse(split[2]);
 
-                            puppetMaster.SlowW(id, delayInSeconds);
+                            puppetMaster.UnfreezeW(id);
 
                         }
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                            Console.WriteLine("Wrong usage. Usage: UNFREEZEW <ID>");
                         }
 
                         break;
@@ -282,22 +281,21 @@ namespace PuppetMaster
                     case FREEZEC:
 
                         /*
-                          * SLOWW <ID> <delay-in-seconds>
+                          * FREEZEC <ID>
                           */
 
-                        if (split.Length == 3)
+                        if (split.Length == 2)
                         {
 
                             string id = split[1];
-                            int delayInSeconds = Int32.Parse(split[2]);
 
-                            puppetMaster.SlowW(id, delayInSeconds);
+                            puppetMaster.FreezeC(id);
 
                         }
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                            Console.WriteLine("Wrong usage. Usage: FREEZEC <ID>");
                         }
 
                         break;
@@ -305,22 +303,21 @@ namespace PuppetMaster
                     case UNFREEZEC:
 
                         /*
-                          * SLOWW <ID> <delay-in-seconds>
+                          * UNFREEZEC <ID>
                           */
 
-                        if (split.Length == 3)
+                        if (split.Length == 2)
                         {
 
                             string id = split[1];
-                            int delayInSeconds = Int32.Parse(split[2]);
 
-                            puppetMaster.SlowW(id, delayInSeconds);
+                            puppetMaster.UnfreezeC(id);
 
                         }
                         else
                         {
                             // Input error, it has more than 4 arguments
-                            Console.WriteLine("Wrong usage. Usage: SLOWW <ID> <delay-in-seconds>");
+                            Console.WriteLine("Wrong usage. Usage: UNFREEZEC <ID>");
                         }
 
                         break;
