@@ -20,9 +20,9 @@ namespace PADIMapNoReduce {
 
         bool RegisterOwnWorker(int id, string url);
 
-        bool BroadcastNewWorker(string url);
+        bool BroadcastNewWorker(int id, string url);
 
-        bool RegisterNewWorkers(List<string> workerServiceUrl);
+        bool RegisterNewWorkers(HashSet<KeyValuePair<int,string>> workerServiceUrl);
 
         bool PrintStatus();
 
@@ -35,8 +35,10 @@ namespace PADIMapNoReduce {
         bool FreezeC();
         
         bool UnfreezeC();
-    }
 
+        WorkStatus IsAlive(HashSet<KeyValuePair<int, string>> currentViewWorkers, HashSet<WorkStatus> currentJobAssigment);
+
+    }
 
     public interface IClient {
 

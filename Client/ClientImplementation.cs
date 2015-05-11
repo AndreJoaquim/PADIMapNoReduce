@@ -50,9 +50,6 @@ namespace Client
             // Prepend the protocol and append the port
             url = "tcp://" + url + ":" + tcpPort + "/C";
 
-            // Initialize the Job Distribution structure
-            jobDistribution = new JobDistribution();
-
             System.Console.WriteLine("Created Client at: " + url);
         }
 
@@ -80,6 +77,7 @@ namespace Client
             this.numberOfSplits = numberOfSplits;
 
             jobDistributionMutex.WaitOne();
+            jobDistribution = new JobDistribution();
             jobDistribution.TotalJobs = numberOfSplits;
             jobDistribution.JobsDone = 0;
             jobDistributionMutex.ReleaseMutex();
