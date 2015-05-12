@@ -39,9 +39,9 @@ namespace PuppetMaster
                 }
             }
 
-            tcpPort = int.Parse(System.Environment.GetEnvironmentVariable(PuppetMaster.Program.PUPPET_MASTER_PORT, EnvironmentVariableTarget.Process));
+            tcpPort = int.Parse(System.Environment.GetEnvironmentVariable(PuppetMaster.ScriptLoader.PUPPET_MASTER_PORT, EnvironmentVariableTarget.Process));
 
-            clientUri = System.Environment.GetEnvironmentVariable(PuppetMaster.Program.CLIENT_URI, EnvironmentVariableTarget.Process);
+            clientUri = System.Environment.GetEnvironmentVariable(PuppetMaster.ScriptLoader.CLIENT_URI, EnvironmentVariableTarget.Process);
             
             // Prepend the protocol and append the port
             String remoteObjectName = "PM";
