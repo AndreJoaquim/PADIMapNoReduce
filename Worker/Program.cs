@@ -196,6 +196,11 @@ namespace PADIMapNoReduce {
         /// </summary>
         private Object frozenCLock = new Object();
 
+        private string className;
+
+        private byte[] dllCode;
+
+        private string clientUrl;
 
         // ====================================================
         // Constructors
@@ -282,11 +287,10 @@ namespace PADIMapNoReduce {
         /// <returns></returns>
         public bool FinishProcessing(string workerUrl, WorkStatus workerStatus) {
 
+            TestFrozenC();
             jobsAssigmentMutex.WaitOne();
 
-
             foreach (WorkStatus iWorkStatus in jobsAssigment) {
-
 
                 if (iWorkStatus.getWorkerId() == workerStatus.getWorkerId() && iWorkStatus.getBeginIndex() == workerStatus.getBeginIndex()) {
 
@@ -305,10 +309,20 @@ namespace PADIMapNoReduce {
             jobsAssigmentMutex.ReleaseMutex();
 
             availableWorkerToJobMutex.WaitOne();
-            availableWorkerToJob.Add(workerUrl);
+            bool exists = availableWorkerToJob.Contains(workerUrl);
             availableWorkerToJobMutex.ReleaseMutex();
 
-            queueWorkersSemaphore.Release(1);
+            if (!exists) {
+
+                availableWorkerToJobMutex.WaitOne();
+                availableWorkerToJob.Add(workerUrl);
+                availableWorkerToJobMutex.ReleaseMutex();
+
+                queueWorkersSemaphore.Release(1);
+
+            }
+
+            
 
             return true;
         }
@@ -321,10 +335,10 @@ namespace PADIMapNoReduce {
         /// <returns>Returns true if the split is not done and assigned to that workerId</returns>
         public bool isSplitValid(int workerId, long beginSplit) {
 
-            Console.WriteLine("isSplitValid " + workerId + " " + beginSplit);
+            TestFrozenC();
+
             if (currentJobTracker != ownUrl) //i'm not the jobTracker anymore
                 return false;
-            Console.WriteLine("isSplitValid " + workerId + " " + beginSplit + " 1");
 
             bool isValid = false;
             
@@ -432,7 +446,9 @@ namespace PADIMapNoReduce {
         /// Test if the node is a job tracker and if it is add the caller to the workers list
         /// </summary>
         /// <returns></returns>
-        public bool IsJobTrackerAlive(int workerId, string workerUrl) {
+        public bool IsJobTrackerAlive(int workerId, string workerUrl, bool working) {
+
+            TestFrozenC();
 
             if (currentJobTracker != ownUrl) //i'm not the jobTracker anymore
                 return false;
@@ -449,18 +465,46 @@ namespace PADIMapNoReduce {
                 workersIDUrl.Add(new KeyValuePair<int, string>(workerId, workerUrl));
                 workersIDUrlMutex.ReleaseMutex();
 
-                //Add to current job available workers
-                availableWorkerToJobMutex.WaitOne();
-                availableWorkerToJob.Add(workerUrl);
-                availableWorkerToJobMutex.ReleaseMutex();
 
-                queueWorkersSemaphore.Release(1);
+                if (!working) {
 
+                    availableWorkerToJobMutex.WaitOne();
+                    exists = availableWorkerToJob.Contains(workerUrl);
+                    availableWorkerToJobMutex.ReleaseMutex();
+
+                    if (!exists) {
+
+                        //Add to current job available workers
+                        availableWorkerToJobMutex.WaitOne();
+                        availableWorkerToJob.Add(workerUrl);
+                        availableWorkerToJobMutex.ReleaseMutex();
+
+                        queueWorkersSemaphore.Release(1);
+
+                    }
+
+                }
             }
-
             return true;
         }
-        
+
+
+        public bool IsNodeInNetwork(KeyValuePair<int, string> node) {
+
+            bool isInNetwork = false;
+
+            workersIDUrlMutex.WaitOne();
+
+            foreach(KeyValuePair<int, string> worker in workersIDUrl){
+                    
+                if(worker.Value == node.Value && worker.Key == node.Key)
+                    isInNetwork = true;
+            }
+
+            workersIDUrlMutex.ReleaseMutex();
+            return isInNetwork;
+
+        }
         // ====================================================
         // Worker Functions
         // ====================================================
@@ -479,13 +523,19 @@ namespace PADIMapNoReduce {
         /// <returns></returns>
         public bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl) {
 
+            this.className = className;
+
+            this.dllCode = dllCode;
+
+            this.clientUrl = clientUrl;
+
             myWorkerStatus.setSplitIndexes(beginIndex, endIndex);
             myWorkerStatus.setWorkerId(ownId);
             myWorkerStatus.setNumberLinesComputed(0);
 
             currentJobTracker = jobTrackerUrl;
 
-            Thread thread = new Thread(() => RunAsyncJob(className, dllCode, beginIndex, endIndex, clientUrl, jobTrackerUrl));
+            Thread thread = new Thread(() => RunAsyncJob(className, dllCode, beginIndex, endIndex, clientUrl));
             thread.Start();
 
             return false;
@@ -501,14 +551,13 @@ namespace PADIMapNoReduce {
         /// <param name="endIndex"></param>
         /// <param name="clientUrl"></param>
         /// <param name="jobTrackerUrl"></param>
-        public void RunAsyncJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTrackerUrl) {
+        public void RunAsyncJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl) {
 
             // Get Input Split from client
             myWorkerStatus.changeStatus(WorkStatus.Status.GettingInput);
             IClient clientObj = (IClient)Activator.GetObject(typeof(IClient), clientUrl);
 
             TestFrozenW(); //Test if it is frozen
-
             string input = clientObj.getInputSplit(ownId, beginIndex, endIndex);
 
             // Fetch dll 
@@ -575,13 +624,12 @@ namespace PADIMapNoReduce {
                             }
 
                             //Test if the work is still valid
-                            IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), jobTrackerUrl);
+                            IWorker jobTracker = (IWorker)Activator.GetObject(typeof(IWorker), currentJobTracker);
 
                             //FREEZEW - Not Able to Communicate with outside
                             TestFrozenW();
                             bool splitValid = jobTracker.isSplitValid(ownId, beginIndex);
 
-                            Console.WriteLine("Split beginIndex=" + beginIndex + " is valid? " + splitValid);
 
                             if (splitValid) {
 
@@ -603,7 +651,8 @@ namespace PADIMapNoReduce {
 
                         } catch (Exception e) {
 
-                            System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_ASYNC_JOB] Could not invoke method.");
+                            System.Console.WriteLine("IMPOSSIBLE TO CONNECT TO JOBTRACKER ON: " + currentJobTracker);
+                            /*System.Console.WriteLine("[WORKER_SERVICES_ERROR1:RUN_ASYNC_JOB] Could not invoke method.");
                             System.Console.WriteLine("=========================");
                             System.Console.WriteLine(e.StackTrace);
                             System.Console.WriteLine("=========================");
@@ -613,7 +662,7 @@ namespace PADIMapNoReduce {
                             System.Console.WriteLine("=========================");
                             System.Console.WriteLine(e.InnerException.Message);
                             System.Console.WriteLine("=========================");
-                            System.Console.WriteLine(e.InnerException.StackTrace);
+                            System.Console.WriteLine(e.InnerException.StackTrace);*/
 
                         }
 
@@ -642,8 +691,8 @@ namespace PADIMapNoReduce {
             workersIDUrl.Add(new KeyValuePair<int, string>(id, url));
 
             //Create Thread that tells either the network or the jobTracker that the node is alive
-            //Thread WorkerIsAliveThread = new Thread(() => WorkerIsAliveAsync());
-            //WorkerIsAliveThread.Start();
+            Thread WorkerIsAliveThread = new Thread(() => WorkerIsAliveAsync());
+            WorkerIsAliveThread.Start();
 
             return true;
         }
@@ -656,10 +705,22 @@ namespace PADIMapNoReduce {
         public bool RegisterNewWorkers(HashSet<KeyValuePair<int, string>> workerServiceUrl) {
 
 
+
             workersIDUrlMutex.WaitOne();
             foreach (KeyValuePair<int, string> workerPair in workerServiceUrl) {
 
-                workersIDUrl.Add(workerPair);
+                bool isDuplicate = false;
+
+                foreach(KeyValuePair<int,string> currentWorkerPair in workersIDUrl){
+
+                    if(workerPair.Value == currentWorkerPair.Value && workerPair.Key == workerPair.Key)
+                        isDuplicate = true;
+
+                }
+
+                if(!isDuplicate)
+                    workersIDUrl.Add(workerPair);
+    
             }
             workersIDUrlMutex.ReleaseMutex();
 
@@ -713,8 +774,12 @@ namespace PADIMapNoReduce {
 
             Console.WriteLine("Current task:");
             Console.WriteLine(myWorkerStatus.getStatus());
-            Console.WriteLine("Done:");
-            Console.WriteLine(myWorkerStatus.getNumberLinesComputed() + "/" + myWorkerStatus.getTotalNumberLines());
+
+            if (myWorkerStatus.getStatus() == WorkStatus.Status.Computing) {
+                Console.WriteLine("Done:");
+                Console.WriteLine(myWorkerStatus.getNumberLinesComputed() + "/" + myWorkerStatus.getTotalNumberLines());
+            }
+
 
             return true;
         }
@@ -786,7 +851,7 @@ namespace PADIMapNoReduce {
 
             lock (frozenCLock) {
                 isFrozenC = false;
-                Monitor.PulseAll(frozenWLock);
+                Monitor.PulseAll(frozenCLock);
             }
             return true;
         }
@@ -810,6 +875,8 @@ namespace PADIMapNoReduce {
         public void IsAliveAsync() {
 
             while (!jobDone) {
+
+                TestFrozenC();
 
                 //Is alive interval
                 Thread.Sleep(2000);
@@ -906,6 +973,10 @@ namespace PADIMapNoReduce {
 
             while (!jobDone) {
 
+                
+
+                TestFrozenC();
+
                 //Get first job available
 
                 jobsAssigmentMutex.WaitOne();
@@ -962,6 +1033,7 @@ namespace PADIMapNoReduce {
 
                 //Send the job to worker
                 availableWorkerToJobMutex.WaitOne();
+
                 String workerUrl = (string)availableWorkerToJob[0];
                 availableWorkerToJob.RemoveAt(0);
                 availableWorkerToJobMutex.ReleaseMutex();
@@ -1013,11 +1085,11 @@ namespace PADIMapNoReduce {
 
 
                     jobsAssigmentMutex.ReleaseMutex();
-                    //System.Console.WriteLine("[DISTRIBUTE_WORK] Sent work to " + workerUrl);
+                    
 
 
 
-                } catch (SocketException e) {
+                } catch (Exception e) {
 
 
                     System.Console.WriteLine("[ERROR_DISTRIBUTE_WORK1]  Cant send work to " + workerUrl);
@@ -1031,8 +1103,6 @@ namespace PADIMapNoReduce {
 
                     queueWorkersSemaphore.Release(1);
 
-                } finally {
-                    
                 }
 
             }
@@ -1044,6 +1114,8 @@ namespace PADIMapNoReduce {
         public void WorkerIsAliveAsync() {
 
             while (true) {
+
+                TestFrozenW();
 
                 Thread.Sleep(2000);
 
@@ -1058,7 +1130,7 @@ namespace PADIMapNoReduce {
 
                     try {
 
-                        bool isJobTracker = jobTrackerObject.IsJobTrackerAlive(ownId, ownUrl);
+                        bool isJobTracker = jobTrackerObject.IsJobTrackerAlive(ownId, ownUrl, myWorkerStatus.getStatus() != WorkStatus.Status.Idle);
 
                         jobTrackerAvailable = isJobTracker; //Worker connected but his he the jobTracker
 
@@ -1067,19 +1139,22 @@ namespace PADIMapNoReduce {
                         //Try again
                         try {
 
-                            bool isJobTracker = jobTrackerObject.IsJobTrackerAlive(ownId, ownUrl);
+                            bool isJobTracker = jobTrackerObject.IsJobTrackerAlive(ownId, ownUrl, myWorkerStatus.getStatus() != WorkStatus.Status.Idle);
 
                             jobTrackerAvailable = isJobTracker; //Worker connected but his he the jobTracker
 
                         } catch (Exception) { //Cannot connect to job Tracker 2nd try
 
-                            //Nothing to do
+                            Console.WriteLine("Cannot connect to primary jobTracker:" + currentJobTracker);
+
                         }
 
                     }
 
 
                     if (!jobTrackerAvailable) { //Job Tracker not available
+
+                        Console.WriteLine("Cannot connect to primary jobtracker on: " + currentJobTracker + "! Testing second jobtracker");
 
                         int id = int.MaxValue;
                         string url = "";
@@ -1097,34 +1172,97 @@ namespace PADIMapNoReduce {
                         }
                         workersIDUrlMutex.ReleaseMutex();
 
-                        //Ask the secondJobTracker if he is alive
-                        IWorker secondJobTrackerObject = (IWorker)Activator.GetObject(typeof(IWorker), url);
+                        Console.WriteLine(">>>" + url);
 
-                        try {
+                        if (id == ownId && url == ownUrl) {
 
-                            bool isSecondJobTracker = secondJobTrackerObject.IsJobTrackerAlive(ownId, ownUrl);
+                            Console.WriteLine("I'm new jobtracker");
 
-                            if (isSecondJobTracker) {//Second jobTracker is alive but is he jobtracker?
+                            // Create Queue with workers
+                            availableWorkerToJob = new ArrayList();
 
-                                currentJobTracker = url;
-                                jobTrackerAvailable = true;
+                            foreach (KeyValuePair<int, string> worker in workersIDUrl)
+                                availableWorkerToJob.Add(worker.Value);
+
+                            queueWorkersSemaphore = new Semaphore(workersIDUrl.Count(), workersIDUrl.Count());
+
+                            currentJobTracker = url;
+
+                            jobsAssigmentMutex.WaitOne();
+                            foreach (WorkStatus ws in jobsAssigment) {
+
+                                if (ws.isWorkerAssigned() && !ws.isWorkCompleted()) {
+                                    ws.removeWorker();
+                                }
 
                             }
+                            jobsAssigmentMutex.ReleaseMutex();
 
-                        } catch (Exception) { //Cannot connect to second job Tracker 2nd try
+                            //Launch thread to isAlive
+                            Thread isAliveThread = new Thread(() => IsAliveAsync());
+                            isAliveThread.Start();
 
-                            //Nothing to do
+
+                            //Launch Thread to distribute works
+                            Thread distributeWorkAsyncThread = new Thread(() => DistributeWorkAsync(className, dllCode, clientUrl));
+                            distributeWorkAsyncThread.Start();
+
+                        } else {
+
+                            Console.WriteLine("New jobtracker on: " + url);
+
+                            currentJobTracker = url;
+                            jobTrackerAvailable = true;
+                            /*
+                            //Ask the secondJobTracker if he is alive
+                            IWorker secondJobTrackerObject = (IWorker)Activator.GetObject(typeof(IWorker), url);
+
+                            try {
+
+                                bool isSecondJobTracker = secondJobTrackerObject.IsJobTrackerAlive(ownId, ownUrl, myWorkerStatus.getStatus() != WorkStatus.Status.Idle);
+
+                                if (isSecondJobTracker) {//Second jobTracker is alive but is he jobtracker?
+
+                                    currentJobTracker = url;
+                                    jobTrackerAvailable = true;
+
+                                }
+
+                            } catch (Exception) { //Cannot connect to second job Tracker 2nd try
+
+                                //Nothing to do
+                            }*/
                         }
-
                     }
-
                 }
 
                 if (!jobTrackerAvailable) { //When none of the jobTrackers are alive  
 
-                    //Try to reenter in the network
 
-                    //TODO: Call anynode and try to reenter the network
+                    foreach(KeyValuePair<int,string> node in workersIDUrl){
+
+                        try{
+                        
+                            IWorker nodeObj = (IWorker) Activator.GetObject(typeof(IWorker), node.Value);
+
+                            //Am I in the network?
+                            if(!nodeObj.IsNodeInNetwork(node)){
+
+                                nodeObj.BroadcastNewWorker(ownId,ownUrl);
+
+                            }
+
+                            //When it is in the network
+                            break;
+
+                        }catch (Exception e){
+
+                            //Can't connect to this one, try another one
+                             continue;
+                        }
+
+                    } // if no worker connects it means that the network doesn't exist
+
                 }
             }
  

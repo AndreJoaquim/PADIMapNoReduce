@@ -17,7 +17,7 @@ namespace PADIMapNoReduce {
 
         bool isSplitValid(int workerId, long beginSplit);
 
-        bool IsJobTrackerAlive(int workerId, string workerUrl);
+        bool IsJobTrackerAlive(int workerId, string workerUrl, bool working);
 
         //Worker Methods
         bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl);
@@ -27,6 +27,8 @@ namespace PADIMapNoReduce {
         bool BroadcastNewWorker(int id, string url);
 
         bool RegisterNewWorkers(HashSet<KeyValuePair<int,string>> workerServiceUrl);
+
+        bool IsNodeInNetwork(KeyValuePair<int,string> node);
 
         bool PrintStatus();
 

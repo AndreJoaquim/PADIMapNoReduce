@@ -177,12 +177,6 @@ namespace Client
             // Read the whole split from the StreamReader's buffer
             beginStreamReader.ReadBlock(splitBuffer, 0, splitBuffer.Length);
 
-            jobDistributionMutex.WaitOne();
-            // Save the job distributed on our JobDistribution class
-            System.Console.WriteLine("[GET_INPUT_SPLIT] Keeping track of the job...");
-            jobDistribution.AddJob(workerId, inputBeginIndex, inputEndIndex);
-            jobDistributionMutex.ReleaseMutex();
-
             System.Console.WriteLine("[GET_INPUT_SPLIT] Finished Input Split");
             return new String(splitBuffer);
                         
@@ -202,7 +196,8 @@ namespace Client
             jobDistributionMutex.WaitOne();
             // Update the job result
 
-            jobDistribution.UpdateJob(workerId, result);
+            // Save the job distributed on our JobDistribution class
+            jobDistribution.AddJob(workerId, result);
 
             // Check if the whole job is done
             if (numberOfSplits == jobDistribution.JobsDone) {

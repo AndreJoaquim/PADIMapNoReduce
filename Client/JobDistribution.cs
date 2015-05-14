@@ -53,9 +53,12 @@ namespace Client
             return true;
         }
 
-        public bool AddJob(int workerId, long beginIndex, long endIndex, String result)
+        public bool AddJob(int workerId, String result)
         {
-            mAllJobs.Add(new Job(workerId, beginIndex, endIndex, result));
+            Job job = new Job(workerId, result);
+            mAllJobs.Add(job);
+            job.IsDone = true;
+            JobsDone++;
             return true;
         }
 
@@ -120,11 +123,9 @@ namespace Client
             /// <param name="beginIndex">The begin index</param>
             /// <param name="endIndex">The end index</param>
             /// <param name="result">The result of the job</param>
-            public Job(int workerId, long beginIndex, long endIndex, String result)
+            public Job(int workerId, String result)
             {
                 mWorkerId = workerId;
-                mBeginIndex = beginIndex;
-                mEndIndex = endIndex;
                 mResult = result;
             }
 
