@@ -13,7 +13,11 @@ namespace PADIMapNoReduce {
         // Job Tracker Methods
         bool RequestJob(string clientUrl, long inputSize, string className, byte[] dllCode, int NumberOfSplits);
 
-        bool FinishProcessing(string workerUrl);
+        bool FinishProcessing(string workerUrl, WorkStatus workerStatus);
+
+        bool isSplitValid(int workerId, long beginSplit);
+
+        bool IsJobTrackerAlive(int workerId, string workerUrl);
 
         //Worker Methods
         bool RunJob(string className, byte[] dllCode, long beginIndex, long endIndex, string clientUrl, string jobTackerUrl);
@@ -46,7 +50,7 @@ namespace PADIMapNoReduce {
 
         String getInputSplit(int workerId, long inputBeginIndex, long inputEndIndex);
 
-        bool sendProcessedSplit(int workerId, IList<KeyValuePair<string, string>> result);
+        bool sendProcessedSplit(int workerId, String result);
 
         bool finishJob();
         

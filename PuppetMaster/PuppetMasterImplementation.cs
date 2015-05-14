@@ -13,6 +13,7 @@ using System.IO;
 using System.Runtime.Remoting.Channels.Tcp;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting;
+using System.Threading;
 
 namespace PuppetMaster
 {
@@ -73,6 +74,7 @@ namespace PuppetMaster
 
                 Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ".");
 
+                Thread.Sleep(500);
                 return true;
 
             } else {
@@ -111,6 +113,7 @@ namespace PuppetMaster
 
                 Console.WriteLine("Created worker " + id + " at " + serviceUri.ToString() + ". Entry Level:" + entryUri.ToString() + ".");
 
+                Thread.Sleep(500);
                 return true;
 
             } else {

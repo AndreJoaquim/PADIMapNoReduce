@@ -53,13 +53,13 @@ namespace Client
             return true;
         }
 
-        public bool AddJob(int workerId, long beginIndex, long endIndex, IList<KeyValuePair<string, string>> result)
+        public bool AddJob(int workerId, long beginIndex, long endIndex, String result)
         {
             mAllJobs.Add(new Job(workerId, beginIndex, endIndex, result));
             return true;
         }
 
-        public bool UpdateJob(int workerId, IList<KeyValuePair<string, string>> result)
+        public bool UpdateJob(int workerId, String result)
         {
             foreach (Job job in mAllJobs) {
                 if (job.WorkerId == workerId && !job.IsDone) {
@@ -79,7 +79,7 @@ namespace Client
             private int mWorkerId;
             private long mBeginIndex;
             private long mEndIndex;
-            private IList<KeyValuePair<string, string>> mResult;
+            private String mResult;
             private bool mIsDone;
 
             // Properties to get fields
@@ -89,7 +89,7 @@ namespace Client
 
             public long EndIndex { get { return mEndIndex; } }
 
-            public IList<KeyValuePair<string, string>> Result {
+            public String Result {
                 get { return mResult; }
                 set { mResult = value; }
             }
@@ -110,7 +110,7 @@ namespace Client
                 mWorkerId = workerId;
                 mBeginIndex = beginIndex;
                 mEndIndex = endIndex;
-                mResult = new List<KeyValuePair<string, string>>();
+                mResult = "";
             }
 
             /// <summary>
@@ -120,7 +120,7 @@ namespace Client
             /// <param name="beginIndex">The begin index</param>
             /// <param name="endIndex">The end index</param>
             /// <param name="result">The result of the job</param>
-            public Job(int workerId, long beginIndex, long endIndex, IList<KeyValuePair<string, string>> result)
+            public Job(int workerId, long beginIndex, long endIndex, String result)
             {
                 mWorkerId = workerId;
                 mBeginIndex = beginIndex;

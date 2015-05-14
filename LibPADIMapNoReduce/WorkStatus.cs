@@ -26,7 +26,7 @@ namespace PADIMapNoReduce {
         /// <summary>
         /// Number of lines computed
         /// </summary>
-        private int numberLinesComputed = 0;
+        private int numberLinesComputed = -1;
 
         /// <summary>
         /// Total number of lines to compute

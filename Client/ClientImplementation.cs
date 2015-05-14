@@ -188,21 +188,29 @@ namespace Client
                         
         }
 
-        public bool sendProcessedSplit(int workerId, IList<KeyValuePair<string, string>> result)
+        public bool sendProcessedSplit(int workerId, String result)
         {
 
             // Print the split received
             //foreach (KeyValuePair<string, string> pair in result)
             //    Console.WriteLine("[SEND_PROCESSED_SPLIT] Received split for worker {0} | key: {1}; value: {2}", workerId, pair.Key, pair.Value);
 
+            //Convert from String to Ilist
+
+            Console.WriteLine("[SEND_PROCESSED_SPLIT] Recived work from " + workerId);
+            Console.WriteLine("[SEND_PROCESSED_SPLIT] " + jobDistribution.JobsDone + " of " + numberOfSplits);
             jobDistributionMutex.WaitOne();
             // Update the job result
+
             jobDistribution.UpdateJob(workerId, result);
 
             // Check if the whole job is done
-            if (numberOfSplits == jobDistribution.JobsDone)
+            if (numberOfSplits == jobDistribution.JobsDone) {
+                Console.WriteLine("End Job");
                 finishJob();
 
+            }
+                
             jobDistributionMutex.ReleaseMutex();
             return true;
         }
@@ -220,11 +228,8 @@ namespace Client
                 Console.WriteLine("[FINISH_JOB] Saving split " + i + " to file...");
 
                 fileOutputStream = new StreamWriter(outputDirectoryPath + "\\" + i + ".out");
-                
-                foreach(KeyValuePair<string, string> pair in job.Result){
-                    fileOutputStream.WriteLine( pair.Key + "=>" + pair.Value);
-                }
 
+                fileOutputStream.WriteLine(job.Result);
 
                 fileOutputStream.Close();
                 i++;
